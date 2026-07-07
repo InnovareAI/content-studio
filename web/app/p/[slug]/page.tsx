@@ -1,3 +1,5 @@
+import { getSpace } from '@/lib/space'
+
 type SpacePageProps = Readonly<{
   params: Promise<{
     slug: string
@@ -6,14 +8,22 @@ type SpacePageProps = Readonly<{
 
 export default async function SpacePage({ params }: SpacePageProps) {
   const { slug } = await params
+  const { space } = await getSpace(slug)
 
   return (
-    <main style={{ padding: '24px', color: 'var(--ink)' }}>
+    <main
+      style={{
+        padding: '24px',
+        color: 'var(--ink)',
+        background: 'var(--paper)',
+        minHeight: '100vh',
+      }}
+    >
       <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>
-        Space: {slug}
+        {space.name}
       </h1>
       <p style={{ margin: '8px 0 0', color: 'var(--ghost)' }}>
-        Tenant access is checked by the server layout before this page renders.
+        /p/{space.slug}
       </p>
     </main>
   )

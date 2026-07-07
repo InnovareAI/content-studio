@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "verify:tenant-isolation": "node scripts/verify-tenant-isolation.mjs",
+    "build": "npm run verify:tenant-isolation && next build",
     "start": "next start",
     "lint": "next lint"
   },

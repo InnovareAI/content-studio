@@ -1,5 +1,4 @@
-import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { getSpace } from '@/lib/space'
 
 type SpaceLayoutProps = Readonly<{
   children: React.ReactNode
@@ -13,24 +12,9 @@ export default async function SpaceLayout({
   params,
 }: SpaceLayoutProps) {
   const { slug } = await params
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { space } = await getSpace(slug)
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  const { data: project } = await supabase
-    .from('projects')
-    .select('id, name, slug')
-    .eq('slug', slug)
-    .maybeSingle()
-
-  if (!project) {
-    notFound()
-  }
+  void space
 
   return children
 }

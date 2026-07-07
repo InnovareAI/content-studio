@@ -41,6 +41,24 @@ export default async function HomePage() {
         >
           Next.js foundation, Phase 0
         </p>
+        <form action="/auth/signout" method="post" style={{ marginTop: '20px' }}>
+          <button
+            type="submit"
+            style={{
+              appearance: 'none',
+              border: '1px solid var(--line)',
+              borderRadius: '8px',
+              background: 'var(--paper-warm)',
+              color: 'var(--ink)',
+              cursor: 'pointer',
+              font: 'inherit',
+              fontSize: '14px',
+              padding: '10px 14px',
+            }}
+          >
+            Sign out
+          </button>
+        </form>
       </section>
     </main>
   )
