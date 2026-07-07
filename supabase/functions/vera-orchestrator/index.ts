@@ -333,8 +333,15 @@ Deno.serve(async (req) => {
           ? audienceQuery.maybeSingle()
           : Promise.resolve({ data: null, error: null })
 
-        const [{ data: skillRows }, { data: campaign }, { data: audience }] = await Promise.all([
-          skillsQuery, campaignQuery, audiencePromise,
+        // The client's Brain: business context, positioning, proof, voice, and
+        // constraints (stored in project.instructions). This is the material the
+        // reasoning model absorbs to write grounded strategy and briefs.
+        const projectQuery = project_id
+          ? supabase.from('projects').select('name, description, instructions').eq('id', project_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null })
+
+        const [{ data: skillRows }, { data: campaign }, { data: audience }, { data: projectRow }] = await Promise.all([
+          skillsQuery, campaignQuery, audiencePromise, projectQuery,
         ])
         const skills = ((skillRows ?? []) as SkillRow[]).filter(s =>
           (s.org_id === null || s.org_id === org_id) &&
@@ -386,6 +393,16 @@ ${audience.notes ? `- Operator notes: ${audience.notes}` : ''}
 
 This is not "a VP of Sales" — it is THIS VP of Sales with THESE pains. Reference one specific pain or goal in the post.` : ''
 
+        // Client Brain — the primary material the reasoning model absorbs before
+        // it plans. Grounds the strategy and the writer brief in real positioning
+        // and proof, and lets the writer cite facts instead of inventing them.
+        const clientInstructions = (projectRow?.instructions ?? '').trim()
+        const clientContext = clientInstructions ? `
+
+CLIENT BRAIN — absorb this before planning. This is what VERA knows about ${projectRow?.name ?? 'the client'}: offer, audience, positioning, proof, voice, and constraints. Ground the strategy and the brief_for_writer in these specifics. Put real proof points from here into proof_points so the writer can cite them instead of inventing figures. Do not contradict or exceed what is stated; if a needed detail is missing, note it as an assumption.
+
+${clientInstructions.slice(0, 6000)}` : ''
+
         strategyRaw = await streamStage({
           key: orKey,
           model: reasoningModel,
@@ -393,7 +410,7 @@ This is not "a VP of Sales" — it is THIS VP of Sales with THESE pains. Referen
           temperature: 0.3,
           jsonMode: true,
           system: `You are VERA's Strategist. Analyse the content brief and output a strategy as valid JSON only — no prose, no markdown fences.
-${campaignContext}${audienceContext}
+${clientContext}${campaignContext}${audienceContext}
 
 ${VERA_MARKETING_EXPERTISE}
 
