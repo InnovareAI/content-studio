@@ -671,7 +671,6 @@ export function AppShell({
   const { activeProject, projects } = useProject()
   const rightRailContent = useRightRailContent()
   const rightRailWidth = useRightRailWidth()
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [navCollapsed, setNavCollapsed] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
@@ -849,26 +848,7 @@ export function AppShell({
         <nav className="space-y-0.5 pb-1">
           <RailItem href={spacePath(space, 'brain')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
           <RailItem href={spacePath(space, 'skills')} icon={Zap} label="AI Settings" collapsed={navCollapsed} />
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            title={navCollapsed ? 'Settings' : undefined}
-            aria-label="Settings"
-            className={`w-full flex items-center ${navCollapsed ? 'justify-center px-0' : 'gap-2 px-2.5'} py-1.5 mx-2 transition-colors hover:bg-[var(--fog)]`}
-            style={{
-              background: 'transparent',
-              color: 'var(--ink-quiet)',
-              fontWeight: 450,
-              fontSize: 13,
-              borderRadius: 'var(--radius-md)',
-              width: 'calc(100% - 1rem)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <Settings size={16} strokeWidth={1.75} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
-            {!navCollapsed ? <span className="flex-1 text-left truncate">Settings</span> : null}
-          </button>
+          <RailItem href={spacePath(space, 'settings')} icon={Settings} label="Settings" collapsed={navCollapsed} />
           <button
             type="button"
             onClick={toggleNav}
@@ -1082,7 +1062,6 @@ export function AppShell({
         </button>
       ) : null}
 
-      {settingsOpen ? <SettingsDialog onClose={() => setSettingsOpen(false)} space={space} /> : null}
     </div>
   )
 }
