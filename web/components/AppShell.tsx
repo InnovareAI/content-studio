@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ElementType, ReactNode } from 'react'
 import {
   BarChart3,
@@ -25,24 +25,17 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { useProject } from '@/components/providers/ProjectProvider'
+import { supabase } from '@/lib/supabase'
+import type { Project } from '@/lib/db-types'
+import { useRightRailContent, useRightRailWidth } from '@/lib/rightRailContext'
 
-export type AppShellSpace = {
-  id: string
-  name: string
-  slug: string
-}
-
-export type AppShellProject = AppShellSpace & {
-  is_starred: boolean | null
-  is_archived: boolean | null
-}
+export type AppShellSpace = Pick<Project, 'id' | 'name' | 'slug'>
+export type AppShellProject = Project
 
 type AppShellProps = Readonly<{
   children: ReactNode
-  space: AppShellSpace
-  projects: AppShellProject[]
-  userEmail: string
   pendingCount: number
 }>
 
@@ -262,8 +255,6 @@ function RailRecents({
     }
 
     let cancelled = false
-    const supabase = createClient()
-
     const load = () => {
       const local = localRailSessions(space.id)
       setSessions(local)
@@ -348,15 +339,16 @@ function ClientSwitcher({
 }: {
   collapsed?: boolean
   projects: AppShellProject[]
-  space: AppShellSpace
+  space: AppShellProject
 }) {
   const router = useRouter()
+  const { switchProject } = useProject()
   const [open, setOpen] = useState(false)
   const name = space.name || 'Select space'
 
   const switcherProjects = useMemo(() => {
     const byId = new Map<string, AppShellProject>()
-    byId.set(space.id, { ...space, is_archived: false, is_starred: false })
+    byId.set(space.id, space)
 
     for (const project of projects) {
       if (!project.is_archived) byId.set(project.id, project)
@@ -367,7 +359,7 @@ function ClientSwitcher({
 
   const selectProject = (target: AppShellProject) => {
     setOpen(false)
-    router.push(spacePath(target, 'agent'))
+    switchProject(target.slug)
   }
 
   return (
@@ -672,16 +664,19 @@ const settingsLinkStyle: React.CSSProperties = {
 
 export function AppShell({
   children,
-  space,
-  projects,
-  userEmail,
   pendingCount,
 }: AppShellProps) {
   const router = useRouter()
+  const { user, signOut } = useAuth()
+  const { activeProject, projects } = useProject()
+  const rightRailContent = useRightRailContent()
+  const rightRailWidth = useRightRailWidth()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [navCollapsed, setNavCollapsed] = useState(false)
   const [railOpen, setRailOpen] = useState(true)
+  const [vw, setVw] = useState(1280)
+  const hadRailContent = useRef(false)
 
   useEffect(() => {
     try {
@@ -707,6 +702,36 @@ export function AppShell({
     return () => window.removeEventListener('vera:rail-open', openRail)
   }, [saveRailOpen])
 
+  useEffect(() => {
+    const hasContent = rightRailContent != null
+    if (hasContent && !hadRailContent.current) queueMicrotask(() => setRailOpen(true))
+    hadRailContent.current = hasContent
+  }, [rightRailContent])
+
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const narrowRail = vw < 980
+
+  useEffect(() => {
+    if (narrowRail) {
+      queueMicrotask(() => setRailOpen(false))
+      return
+    }
+
+    let shouldOpen = true
+    try {
+      shouldOpen = localStorage.getItem('vera-rail-open') !== '0'
+    } catch {
+      /* ignore storage errors */
+    }
+    queueMicrotask(() => setRailOpen(shouldOpen))
+  }, [narrowRail])
+
   const toggleNav = () => {
     setNavCollapsed((current) => {
       const next = !current
@@ -719,15 +744,31 @@ export function AppShell({
     })
   }
 
+  if (!activeProject) {
+    return (
+      <div className="flex h-screen overflow-hidden" style={{ background: 'var(--paper)' }}>
+        <main className="flex-1 overflow-y-auto min-h-0">
+          {children}
+        </main>
+      </div>
+    )
+  }
+
+  const space = activeProject
+
   const startNewSession = () => {
     router.push(`${spacePath(space, 'agent')}?new=${Date.now()}`)
   }
 
+  const handleSignOut = async () => {
+    setUserMenuOpen(false)
+    await signOut()
+  }
+
+  const userEmail = user?.email ?? ''
   const name = userEmail ? userEmail.split('@')[0] : 'Account'
   const displayName = name.charAt(0).toUpperCase() + name.slice(1)
   const initials = (userEmail.slice(0, 2) || 'V').toUpperCase()
-
-  void railOpen
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
@@ -888,28 +929,27 @@ export function AppShell({
                 >
                   {userEmail || 'Not signed in'}
                 </div>
-                <form action="/auth/signout" method="post">
-                  <button
-                    type="submit"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: 'var(--danger)',
-                      fontSize: 13,
-                      fontWeight: 500,
-                      textAlign: 'left',
-                    }}
-                  >
-                    <LogOut size={14} /> Log out
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: 'var(--danger)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textAlign: 'left',
+                  }}
+                >
+                  <LogOut size={14} /> Log out
+                </button>
               </div>
             </>
           ) : null}
@@ -950,6 +990,97 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {rightRailContent && railOpen ? (
+        <>
+          {narrowRail ? (
+            <div
+              onClick={() => saveRailOpen(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(20,20,20,0.18)' }}
+            />
+          ) : null}
+          <aside
+            className="flex-shrink-0"
+            style={narrowRail
+              ? {
+                  position: 'fixed',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 41,
+                  width: 'clamp(320px, 90vw, 460px)',
+                  background: 'var(--paper)',
+                  borderLeft: '1px solid var(--paper-edge)',
+                  boxShadow: 'var(--shadow-modal)',
+                }
+              : {
+                  background: 'transparent',
+                  width: rightRailWidth,
+                  borderLeft: '1px solid var(--paper-edge)',
+                  position: 'relative',
+                }}
+          >
+            <button
+              type="button"
+              onClick={() => saveRailOpen(false)}
+              title="Hide panel"
+              style={{
+                position: 'absolute',
+                left: -13,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 25,
+                width: 26,
+                height: 42,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--line)',
+                borderRadius: 999,
+                background: 'var(--surface)',
+                color: 'var(--ghost)',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-pop)',
+              }}
+            >
+              <ChevronRight size={15} />
+            </button>
+            <div className="overflow-y-auto" style={{ height: '100%' }}>
+              {rightRailContent}
+            </div>
+          </aside>
+        </>
+      ) : null}
+
+      {rightRailContent && !railOpen ? (
+        <button
+          type="button"
+          onClick={() => saveRailOpen(true)}
+          title="Show panel"
+          style={{
+            position: 'fixed',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 25,
+            width: 24,
+            height: 46,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid var(--line)',
+            borderRight: 'none',
+            borderTopLeftRadius: 8,
+            borderBottomLeftRadius: 8,
+            background: 'var(--surface)',
+            color: 'var(--ink-quiet)',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-pop)',
+          }}
+        >
+          <ChevronLeft size={16} />
+        </button>
+      ) : null}
 
       {settingsOpen ? <SettingsDialog onClose={() => setSettingsOpen(false)} space={space} /> : null}
     </div>
