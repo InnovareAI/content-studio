@@ -24,7 +24,7 @@ const FORMAT_LABELS: Record<string, string> = {
 }
 
 const VERA_MARKETING_EXPERTISE = `
-VERA senior marketing operating model:
+SONA senior marketing operating model:
 - Treat every brief as a business communication problem, not a generic writing
   request. Resolve audience, business objective, offer, category context,
   positioning, promise, proof, objections, channel, format, CTA, and
@@ -58,7 +58,7 @@ VERA senior marketing operating model:
   source, treat that as a specialist knowledge lens. Preserve the framework's
   actual logic, name the applicable principle in the strategy, and avoid
   drifting into generic tips.
-- Vera constitution: business outcome first, source discipline, strategic
+- Sona constitution: business outcome first, source discipline, strategic
   pushback, space scope isolation, human approval gates for external side
   effects, and explicit quality evaluation.
 - Do not flatter weak strategy. Fix vague positioning, generic audiences,
@@ -96,7 +96,7 @@ async function perplexityResearch(query: string, apiKey: string | null): Promise
       'Authorization': `Bearer ${key}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://vera.innovareai.com',
-      'X-Title': 'VERA Researcher',
+      'X-Title': 'SONA Researcher',
     },
     body: JSON.stringify({
       model: 'perplexity/sonar',
@@ -177,7 +177,7 @@ async function embedQuery(text: string, key: string): Promise<number[] | null> {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://vera.innovareai.com',
-        'X-Title': 'VERA Orchestrator',
+        'X-Title': 'SONA Orchestrator',
       },
       body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
     })
@@ -237,7 +237,7 @@ async function streamStage(opts: {
         'Authorization': `Bearer ${opts.key}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://vera.innovareai.com',
-        'X-Title': 'VERA Orchestrator',
+        'X-Title': 'SONA Orchestrator',
       },
       body: JSON.stringify({
         model,
@@ -453,7 +453,7 @@ This is not "a VP of Sales" — it is THIS VP of Sales with THESE pains. Referen
         const clientInstructions = (projectRow?.instructions ?? '').trim()
         const clientContext = clientInstructions ? `
 
-CLIENT BRAIN — absorb this before planning. This is what VERA knows about ${projectRow?.name ?? 'the client'}: offer, audience, positioning, proof, voice, and constraints. Ground the strategy and the brief_for_writer in these specifics. Put real proof points from here into proof_points so the writer can cite them instead of inventing figures. Do not contradict or exceed what is stated; if a needed detail is missing, note it as an assumption.
+CLIENT BRAIN — absorb this before planning. This is what SONA knows about ${projectRow?.name ?? 'the client'}: offer, audience, positioning, proof, voice, and constraints. Ground the strategy and the brief_for_writer in these specifics. Put real proof points from here into proof_points so the writer can cite them instead of inventing figures. Do not contradict or exceed what is stated; if a needed detail is missing, note it as an assumption.
 
 ${clientInstructions.slice(0, 6000)}` : ''
 
@@ -472,7 +472,7 @@ ${knowledgeHits.map((h, i) => `[${i + 1}] ${h.title}: ${h.excerpt.slice(0, 800)}
           maxTokens: 1600,
           temperature: 0.3,
           jsonMode: true,
-          system: `You are VERA's Strategist. Analyse the content brief and output a strategy as valid JSON only — no prose, no markdown fences.
+          system: `You are SONA's Strategist. Analyse the content brief and output a strategy as valid JSON only — no prose, no markdown fences.
 ${clientContext}${knowledgeContext}${campaignContext}${audienceContext}
 
 ${VERA_MARKETING_EXPERTISE}
@@ -573,7 +573,7 @@ When run_image_designer is true, populate image_prompt with a concrete 1-2 sente
           model: creativeModel,
           maxTokens: 2048,
           temperature: 0.7,
-          system: `You are VERA's Writer. Write the content based on the strategy brief below.
+          system: `You are SONA's Writer. Write the content based on the strategy brief below.
 
 ${VERA_MARKETING_EXPERTISE}
 
@@ -610,7 +610,7 @@ Write only the final content — no preamble, no explanation, no labels, no mark
             model: creativeModel,
             maxTokens: 1024,
             temperature: 0.4,
-            system: `You are VERA's SEO Agent. Optimise the given content for search engines while preserving its voice and quality.
+            system: `You are SONA's SEO Agent. Optimise the given content for search engines while preserving its voice and quality.
 
 Target keywords: ${(strategy.target_keywords as string[]).join(', ')}
 
@@ -642,7 +642,7 @@ SEO NOTES:
             model: creativeModel,
             maxTokens: 1024,
             temperature: 0.7,
-            system: `You are VERA's Persona Adapter. Rewrite the given content to resonate specifically with the target persona described below. Adjust language, examples, pain points, and benefits to match their world — while keeping the core message and length.
+            system: `You are SONA's Persona Adapter. Rewrite the given content to resonate specifically with the target persona described below. Adjust language, examples, pain points, and benefits to match their world — while keeping the core message and length.
 
 Target persona: ${strategy.persona_detail}
 
@@ -734,7 +734,7 @@ Output the rewritten content only — no labels, no explanation.`,
           model: reasoningModel,
           maxTokens: 512,
           temperature: 0.3,
-          system: `You are VERA's Brand Guard. Review the content against brand guidelines.
+          system: `You are SONA's Brand Guard. Review the content against brand guidelines.
 
 ${brandRules || 'No specific brand rules configured. Check for general quality, clarity, and professionalism.'}
 
@@ -754,7 +754,7 @@ Respond concisely:
           model: reasoningModel,
           maxTokens: 512,
           temperature: 0.2,
-          system: `You are VERA's Compliance Checker. Review the content for the following compliance issues:
+          system: `You are SONA's Compliance Checker. Review the content for the following compliance issues:
 
 1. FALSE CLAIMS — any unverified statistics, guarantees, or factual claims that could mislead
 2. COMPETITOR ATTACKS — negative comparisons, disparaging language, or unfair competitor references

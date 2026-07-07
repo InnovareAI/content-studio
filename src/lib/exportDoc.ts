@@ -1,4 +1,4 @@
-// Markdown export of a Vera result — the raw text, no images (image URLs stay
+// Markdown export of a Sona result — the raw text, no images (image URLs stay
 // as links), plus any video links. PDF export lives in ./exportPdf (lazy-loaded
 // because @react-pdf/renderer is heavy).
 

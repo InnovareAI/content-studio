@@ -4,7 +4,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Auth config mirrors SAM (app/lib/supabase.ts): PKCE + detect-session-in-URL
-// so Google/Microsoft SSO and magic links actually complete. VERA is a SPA
+// so Google/Microsoft SSO and magic links actually complete. SONA is a SPA
 // (no server /auth/callback), so the client itself exchanges the ?code= on
 // load — which only works with flowType 'pkce' + detectSessionInUrl.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -45,7 +45,7 @@ export interface Post {
   format: string
   channel: string
   status: string
-  category?: string | null        // content category (à la SocialBee) — set by Vera
+  category?: string | null        // content category (à la SocialBee) — set by Sona
   publish_date?: string
   scheduled_at?: string
   published_at?: string
@@ -96,7 +96,7 @@ export interface Audience {
 
 // ─── Projects — Claude.ai-style bounded scopes within a workspace ────────
 // One workspace can have many projects. Each project has its own custom
-// instructions (injected into VERA's system prompt) and knowledge base.
+// instructions (injected into SONA's system prompt) and knowledge base.
 // Every artifact (campaign, post, chat, audit, voice) gets tagged with
 // project_id once migration 026 lands.
 export interface Project {

@@ -92,7 +92,7 @@ export default function App() {
                 {/* (or the shelf) per the blueprint's surface-fate table.     */}
                 <Route path="dashboard"  element={<RedirectFlatToProject section="vera" />} />{/* legacy → chat */}
                 <Route path="blueprint"  element={<RedirectFlatToProject section="vera" />} />{/* Desk removed → chat */}
-                <Route path="generate"   element={<RedirectFlatToProject section="vera" />} />{/* Generate folds into VERA */}
+                <Route path="generate"   element={<RedirectFlatToProject section="vera" />} />{/* Generate folds into SONA */}
                 <Route path="review"     element={<RedirectFlatToProject section="review" />} />
                 <Route path="review/:id" element={<RedirectReviewDetailToProject />} />
                 <Route path="knowledge"  element={<RedirectFlatToProject section="knowledge" />} />

@@ -35,7 +35,7 @@ export function useModelPricingCatalog() {
             loaded: true,
             source: 'fallback',
             rowCount: 0,
-            error: 'Pricing catalog unavailable. Vera is using fallback estimates.',
+            error: 'Pricing catalog unavailable. Sona is using fallback estimates.',
           })
         } else {
           const catalog = normalizePricingCatalogRows((data ?? []) as ProviderModelPricingRow[])
@@ -44,7 +44,7 @@ export function useModelPricingCatalog() {
             loaded: true,
             source: catalog.length ? 'catalog' : 'fallback',
             rowCount: catalog.length,
-            error: catalog.length ? null : 'Pricing catalog has no active rows. Vera is using fallback estimates.',
+            error: catalog.length ? null : 'Pricing catalog has no active rows. Sona is using fallback estimates.',
           })
         }
       })

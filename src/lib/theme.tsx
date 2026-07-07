@@ -62,7 +62,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const resolvedTheme: ResolvedTheme = theme === 'system' ? systemTheme : theme
 
   // Push the resolved theme onto the same class-based contract SAM uses, while
-  // preserving Vera's existing data-theme selectors.
+  // preserving Sona's existing data-theme selectors.
   useEffect(() => {
     const root = document.documentElement
     const body = document.body

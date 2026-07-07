@@ -159,7 +159,7 @@ export default function Onboarding() {
     }
 
     if (!activeOrg?.id) {
-      setError('No active workspace is available. Open Vera from a workspace before adding a space.')
+      setError('No active workspace is available. Open Sona from a workspace before adding a space.')
       setSubmitting(false)
       return
     }
@@ -340,9 +340,9 @@ function IntroStep({ onStart }: { onStart: () => void }) {
       <div className="inline-flex w-14 h-14 rounded-2xl bg-gray-100 items-center justify-center mb-6">
         <Sparkles className="w-7 h-7 text-gray-700" />
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">Set up Vera&apos;s Brain</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-3">Set up Sona&apos;s Brain</h1>
       <p className="text-base text-gray-600 max-w-md mx-auto mb-8">
-        Start with the company URL, then add only the sources and strategy assumptions Vera should use. You can refine everything in the Brain after setup.
+        Start with the company URL, then add only the sources and strategy assumptions Sona should use. You can refine everything in the Brain after setup.
       </p>
       <button onClick={onStart}
         className="inline-flex items-center gap-1.5 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold">
@@ -359,7 +359,7 @@ function WebsiteStep({ website, onChange }: { website: string; onChange: (v: str
         icon={<Globe2 className="w-5 h-5 text-gray-700" />}
         eyebrow="Required first"
         title="Company URL"
-        body="Vera uses the website as the primary source for extraction, verification, positioning, product pages, SEO headers, and owned content."
+        body="Sona uses the website as the primary source for extraction, verification, positioning, product pages, SEO headers, and owned content."
       />
       <input
         type="text"
@@ -385,7 +385,7 @@ function EssentialsStep({ collected, onChange }: { collected: Record<string, str
         icon={<FileText className="w-5 h-5 text-gray-700" />}
         eyebrow="Optional facts"
         title="Business context"
-        body="Add what you already know. If you leave this light, Vera can extract more from the website and uploaded documents in the Brain."
+        body="Add what you already know. If you leave this light, Sona can extract more from the website and uploaded documents in the Brain."
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="Space name" value={collected.company_name ?? ''} onChange={v => onChange('company_name', v)} placeholder="Acme Inc." />
@@ -413,7 +413,7 @@ function SourcesStep({ collected, onChange }: { collected: Record<string, string
           <div>
             <div className="text-sm font-semibold text-gray-900">Document extraction lives in the Brain</div>
             <p className="text-sm text-gray-500 mt-1">
-              After setup, upload a PDF, DOCX, proposal, brand deck, or brief in Strategy Brain. Vera extracts fields for review before saving.
+              After setup, upload a PDF, DOCX, proposal, brand deck, or brief in Strategy Brain. Sona extracts fields for review before saving.
             </p>
           </div>
         </div>
@@ -441,7 +441,7 @@ function StrategyStep({ collected, onChange }: { collected: Record<string, strin
         icon={<Target className="w-5 h-5 text-gray-700" />}
         eyebrow="Assumptions"
         title="Strategy starting point"
-        body="These are not permanent rules. They help Vera avoid generic output until the Brain has source and performance evidence."
+        body="These are not permanent rules. They help Sona avoid generic output until the Brain has source and performance evidence."
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {STRATEGY_FIELDS.map(field => field.multiline ? (
@@ -483,7 +483,7 @@ function ReviewStep({ collected, onEdit }: { collected: Record<string, string>; 
         icon={<Check className="w-5 h-5 text-gray-700" />}
         eyebrow="Review"
         title="Create this space"
-        body="Click a section to edit. Vera will save this to the Strategy Brain and open the Brain so sources and documents can be pulled next."
+        body="Click a section to edit. Sona will save this to the Strategy Brain and open the Brain so sources and documents can be pulled next."
       />
       <ReviewGroup title="Required start" onEdit={() => onEdit(1)}>
         <Row label="Company URL" value={collected.website ?? 'Not provided'} />

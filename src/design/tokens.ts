@@ -1,4 +1,4 @@
-// VERA design tokens — typed mirror of the canonical CSS variables.
+// SONA design tokens — typed mirror of the canonical CSS variables.
 //
 // Source of truth: src/index.css :root block (also documented in
 // public/vera-design-system.html via claude.ai/design).

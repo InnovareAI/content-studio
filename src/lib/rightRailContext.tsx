@@ -8,7 +8,7 @@
 // takes its width.
 //
 // Width is configurable per consumer: a "pending count" sidebar wants the
-// narrow default; the VERA draft artifact wants a wide, readable panel.
+// narrow default; the SONA draft artifact wants a wide, readable panel.
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'

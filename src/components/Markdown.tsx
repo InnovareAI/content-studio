@@ -1,4 +1,4 @@
-// Renders Vera's assistant messages as formatted markdown (headings, bold,
+// Renders Sona's assistant messages as formatted markdown (headings, bold,
 // lists, GFM tables, links, code) instead of raw text. Styled with the app's
 // design tokens so it reads as a document, not a monospace blob.
 import ReactMarkdown from 'react-markdown'

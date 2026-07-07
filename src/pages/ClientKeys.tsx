@@ -126,7 +126,7 @@ export default function ClientKeys() {
     const { error } = await supabase.from('projects').update({ ai_policy: next }).eq('id', activeProject.id)
     setSavingModels(false)
     if (error) { push({ kind: 'danger', title: 'Could not save models', body: error.message }); return }
-    push({ kind: 'success', title: 'Models saved', body: 'VERA uses these from the next generation.' })
+    push({ kind: 'success', title: 'Models saved', body: 'SONA uses these from the next generation.' })
   }
 
   if (!activeProject) return null

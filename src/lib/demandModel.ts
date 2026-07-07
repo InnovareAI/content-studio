@@ -182,7 +182,7 @@ export const DEMAND_CHANNEL_OPERATING_POLICIES: Record<DemandPlatformKey, Demand
   reddit: {
     speakerMode: 'Community-safe human voice, usually research-only.',
     approvalMode: 'No posting without operator and space approval plus community rule check.',
-    publishGuard: 'Read-first by default. Vera listens, summarizes, and drafts only for human use.',
+    publishGuard: 'Read-first by default. Sona listens, summarizes, and drafts only for human use.',
     measurementFocus: 'Comments, upvotes, objections, language patterns, and traffic intent.',
     samTrigger: 'Repeated pain language, named vendor complaints, research threads, or competitor mentions.',
     risk: 'high',
@@ -222,7 +222,7 @@ export const DEMAND_CHANNEL_OPERATING_POLICIES: Record<DemandPlatformKey, Demand
   email: {
     speakerMode: 'Brand, founder, or campaign owner.',
     approvalMode: 'Approve audience, offer, send segment, and final copy before any send.',
-    publishGuard: 'Draft-only in Vera until a dedicated ESP integration and sending approval exist.',
+    publishGuard: 'Draft-only in Sona until a dedicated ESP integration and sending approval exist.',
     measurementFocus: 'Clicks, replies, traffic, meetings, and content reuse.',
     samTrigger: 'Replies, warm clicks, meeting requests, objections, or high-fit account engagement.',
     risk: 'medium',

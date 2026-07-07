@@ -1,4 +1,4 @@
-// Settings as a modal — SAM-style (WorkspaceSettingsModal). Wraps VERA's
+// Settings as a modal — SAM-style (WorkspaceSettingsModal). Wraps SONA's
 // existing tabbed Settings page in a centered overlay so it opens from the
 // rail without a full page navigation. /settings still works as a deep link.
 

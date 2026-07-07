@@ -362,11 +362,11 @@ export default function Skills() {
 
   const constitutionSkills = useMemo(() => {
     const constitutionalNames = new Set([
-      'Vera Constitution',
+      'Sona Constitution',
       'Anti-Sycophancy Marketing Challenge',
       'Evidence and Claim Discipline',
       'Human Approval Gates',
-      'Vera Evaluation Rubric',
+      'Sona Evaluation Rubric',
     ])
     const constitutionalTags = new Set([
       'constitution',
@@ -470,7 +470,7 @@ export default function Skills() {
 
   async function deleteSkill(skill: Skill) {
     if (skill.is_system) return
-    if (!confirm(`Delete "${skill.name}"? Vera will stop using this skill.`)) return
+    if (!confirm(`Delete "${skill.name}"? Sona will stop using this skill.`)) return
     const { error: deleteErr } = await supabase.from('skills').delete().eq('id', skill.id)
     if (deleteErr) {
       setError(deleteErr.message)
@@ -547,7 +547,7 @@ export default function Skills() {
     <div style={{ padding: space[8], maxWidth: 1180 }}>
       <PageHeader
         eyebrow="AI Settings"
-        title="Vera Intelligence"
+        title="Sona Intelligence"
         subtitle="Principles, skills, and evaluation scenarios."
         actions={
           <div style={{ display: 'flex', gap: space[2] }}>
@@ -574,7 +574,7 @@ export default function Skills() {
       {view === 'skills' && (
         <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: space[3], marginBottom: space[5] }}>
-        <Metric icon={Sparkles} label="Global Vera" value={counts.global} tone={color.accent} />
+        <Metric icon={Sparkles} label="Global Sona" value={counts.global} tone={color.accent} />
         <Metric icon={Layers} label="Workspace" value={counts.workspace} tone={color.dotBlue} />
         <Metric icon={BookOpen} label={activeProject ? 'Active space' : 'Space'} value={counts.client} tone={color.dotGreen} />
         <Metric icon={BarChart3} label="With signal" value={learningStats.trackedSkills} tone={color.dotViolet} />
@@ -603,7 +603,7 @@ export default function Skills() {
         </Select>
         <Select value={scopeFilter} onChange={e => setScopeFilter(e.target.value as ScopeFilter)}>
           <option value="all">All scopes</option>
-          <option value="global">Global Vera</option>
+          <option value="global">Global Sona</option>
           <option value="workspace">Workspace</option>
           <option value="client">Active client</option>
         </Select>
@@ -721,12 +721,12 @@ function ConstitutionView({ skills, loading }: { skills: Skill[]; loading: boole
       <EmptyState
         icon={<ShieldCheck size={28} />}
         title="Constitution not seeded yet"
-        body="Apply the constitution migration to seed Vera's core operating skills."
+        body="Apply the constitution migration to seed Sona's core operating skills."
       />
     )
   }
 
-  const primary = skills.find(skill => skill.name === 'Vera Constitution')
+  const primary = skills.find(skill => skill.name === 'Sona Constitution')
   const supporting = skills.filter(skill => skill.id !== primary?.id)
 
   return (
@@ -737,8 +737,8 @@ function ConstitutionView({ skills, loading }: { skills: Skill[]; loading: boole
             <ShieldCheck size={17} />
           </span>
           <div>
-            <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold }}>Vera Constitution</h2>
-            <p style={{ margin: '4px 0 0', color: color.ghost, fontSize: t.size.cap }}>Runtime principles Vera applies before strategy, copy, review, and tool use.</p>
+            <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold }}>Sona Constitution</h2>
+            <p style={{ margin: '4px 0 0', color: color.ghost, fontSize: t.size.cap }}>Runtime principles Sona applies before strategy, copy, review, and tool use.</p>
           </div>
         </div>
         {primary ? (
@@ -793,7 +793,7 @@ function EvaluationSuite({ scenarios, loading, error }: { scenarios: EvalScenari
       <EmptyState
         icon={<Target size={28} />}
         title="No evaluation scenarios"
-        body="Apply the evaluation migration or create workspace scenarios for Vera QA."
+        body="Apply the evaluation migration or create workspace scenarios for Sona QA."
       />
     )
   }
@@ -916,7 +916,7 @@ function LearningSignalPanel({ stats }: { stats: LearningStats }) {
           <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h4, fontWeight: t.weight.semibold }}>Learning signals</h2>
         </div>
         <p style={{ margin: 0, color: color.ink2, fontSize: t.size.sm, lineHeight: 1.55 }}>
-          Approvals, edits, rejections, and posted outcomes show which skills Vera should trust for each client, channel, and person.
+          Approvals, edits, rejections, and posted outcomes show which skills Sona should trust for each client, channel, and person.
         </p>
         <div style={{ marginTop: space[4], display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[3] }}>
           <SignalMini label="Active skills" value={stats.activeSkills} tone={color.ink} />
@@ -980,7 +980,7 @@ function SkillRow({
         <button onClick={onToggle} style={{ border: 0, background: 'transparent', padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: space[2], marginBottom: space[2], flexWrap: 'wrap' }}>
             <Badge dot={typeDot[skill.type]}>{skill.type}</Badge>
-            <Badge>{scope === 'global' ? 'Global Vera' : scope === 'client' ? 'Space' : 'Workspace'}</Badge>
+            <Badge>{scope === 'global' ? 'Global Sona' : scope === 'client' ? 'Space' : 'Workspace'}</Badge>
             <Badge dot={confidenceColor[conf]}>{conf}</Badge>
             {!skill.is_active && <Badge>Inactive</Badge>}
             {skill.parent_id && <Badge>Forked</Badge>}
@@ -1150,7 +1150,7 @@ function SkillForm({
         <header style={{ padding: space[6], borderBottom: `1px solid ${color.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[4] }}>
           <div>
             <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold }}>{editing ? 'Edit skill' : 'Create skill'}</h2>
-            <p style={{ margin: '5px 0 0', color: color.ghost, fontSize: t.size.cap }}>Write descriptions for Vera: when to trigger, what to avoid, and what evidence supports the skill.</p>
+            <p style={{ margin: '5px 0 0', color: color.ghost, fontSize: t.size.cap }}>Write descriptions for Sona: when to trigger, what to avoid, and what evidence supports the skill.</p>
           </div>
           <Button variant="ghost" iconOnly leading={<X size={16} />} onClick={onClose} />
         </header>
@@ -1187,7 +1187,7 @@ function SkillForm({
             </Field>
           </div>
 
-          <Field label="Description" helper="This is for the model. Describe when Vera should use the skill, not just what it is.">
+          <Field label="Description" helper="This is for the model. Describe when Sona should use the skill, not just what it is.">
             <Textarea rows={3} value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Use when reviewing platform-native posts for hook strength, proof, voice, and channel fit." />
           </Field>
 
@@ -1212,7 +1212,7 @@ function SkillForm({
             </Field>
           </div>
 
-          <Field label="Sources" helper="One per line. Example: General Vera KB: platform-specific review rules.">
+          <Field label="Sources" helper="One per line. Example: General Sona KB: platform-specific review rules.">
             <Textarea rows={4} value={form.source_refs} onChange={e => setForm(prev => ({ ...prev, source_refs: e.target.value }))} />
           </Field>
 

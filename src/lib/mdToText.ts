@@ -1,4 +1,4 @@
-// Convert Vera's Markdown output into clean, paste-ready PLAIN TEXT that keeps
+// Convert Sona's Markdown output into clean, paste-ready PLAIN TEXT that keeps
 // bold (as Unicode bold, so it survives in LinkedIn / email / docs that don't
 // render Markdown) and removes all Markdown syntax (#, **, *, ---, [](), `).
 

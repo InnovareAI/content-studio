@@ -1,4 +1,4 @@
-// Field — VERA's form primitives. Input, Textarea, Select.
+// Field — SONA's form primitives. Input, Textarea, Select.
 //
 // Per the design system:
 //   · 13px text (--t-sm)

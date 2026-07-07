@@ -231,7 +231,7 @@ export function BrainUpload({ onUploaded }: { onUploaded?: () => void }) {
             {contentMode === 'paste' && (
               <div style={{ display: 'grid', gap: space[3] }}>
                 <Field label="Title" optional><Input value={pasteTitle} onChange={e => setPasteTitle(e.target.value)} placeholder="e.g. Brand positioning notes" /></Field>
-                <Field label="Content"><Textarea value={pasteText} onChange={e => setPasteText(e.target.value)} rows={6} placeholder="Paste briefs, positioning, FAQs, transcripts — anything VERA should know." /></Field>
+                <Field label="Content"><Textarea value={pasteText} onChange={e => setPasteText(e.target.value)} rows={6} placeholder="Paste briefs, positioning, FAQs, transcripts — anything SONA should know." /></Field>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button variant="primary" leading={busy ? <Loader2 size={14} /> : <BookOpen size={14} />} onClick={submitPaste} disabled={busy || pasteText.trim().length < 30}>{busy ? 'Adding' : 'Add to Brain'}</Button>
                 </div>
@@ -264,7 +264,7 @@ export function BrainUpload({ onUploaded }: { onUploaded?: () => void }) {
               <div style={{ fontSize: t.size.micro, color: color.ghost, fontWeight: t.weight.semibold, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: space[2] }}>What should this become?</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[3] }}>
                 <DestCard active={postDest === 'reference'} onClick={() => setPostDest('reference')} icon={Sparkles}
-                  title="Voice example" body="Embedded in the Brain. VERA studies the style when writing new posts. Not published." />
+                  title="Voice example" body="Embedded in the Brain. SONA studies the style when writing new posts. Not published." />
                 <DestCard active={postDest === 'draft'} onClick={() => setPostDest('draft')} icon={Send}
                   title="Draft to review" body="Lands in Review as a pending draft you can edit, approve, and schedule." />
               </div>

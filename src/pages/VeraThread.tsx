@@ -1,4 +1,4 @@
-// VERA — the one DOING surface (/p/:slug/vera). The Claude 3-pane:
+// SONA — the one DOING surface (/p/:slug/vera). The Claude 3-pane:
 // rail (Layout) · conversation (center, here) · draft artifact (right rail).
 //
 // One composer drives both chat and drafting: vera-chat decides, and when
@@ -477,7 +477,7 @@ export default function VeraThread() {
     const { data, error } = await supabase.auth.getSession()
     if (error) throw error
     const token = data.session?.access_token
-    if (!token) throw new Error('Sign in again before using Vera.')
+    if (!token) throw new Error('Sign in again before using Sona.')
     return {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -574,9 +574,9 @@ export default function VeraThread() {
   // session. The card is client state that a refresh wipes, so a mid-work
   // refresh should bring it back. The earlier version reopened the latest post
   // for the whole client, which surfaced a STALE draft in a brand-new chat
-  // (and made Vera talk about "this draft" the operator never created). We now
+  // (and made Sona talk about "this draft" the operator never created). We now
   // key the open draft to the session via localStorage: a fresh chat has no
-  // key → no draft → nothing phantom for Vera to reference.
+  // key → no draft → nothing phantom for Sona to reference.
   useEffect(() => {
     if (!activeProject?.id || !sessionId) return
     let did: string | null = null
@@ -737,7 +737,7 @@ export default function VeraThread() {
       }))
   }, [activeOrg?.id, activeProject?.id])
 
-  // Brain readiness — VERA writes sharper when the client's brain is set up, so
+  // Brain readiness — SONA writes sharper when the client's brain is set up, so
   // when it's thin we make "set up the brain" the obvious first step (the spine
   // starts at the brain, persona-first). Cheap count probes per client; guards
   // on errors so a missing table reads as "not done" rather than crashing idle.
@@ -811,7 +811,7 @@ export default function VeraThread() {
     el.style.height = `${Math.min(Math.max(el.scrollHeight, minHeight), 240)}px`
   }, [input, messages.length])
 
-  // "Go home" — clicking the Vera item in the rail (while already here) returns
+  // "Go home" — clicking the Sona item in the rail (while already here) returns
   // to the launcher, the way people expect the logo/home to behave. The prior
   // chat is saved (Recents/History). A ref keeps the latest closure so the
   // listener never goes stale.
@@ -823,7 +823,7 @@ export default function VeraThread() {
     return () => window.removeEventListener('vera:home', h)
   }, [])
 
-  // Resume a chat from the rail's Recents (when already mounted on Vera).
+  // Resume a chat from the rail's Recents (when already mounted on Sona).
   const pickSessionRef = useRef<(sid: string) => void>(() => {})
   useEffect(() => { pickSessionRef.current = pickSession })
   // Track the live session id for the listener below (its effect has [] deps,
@@ -1394,7 +1394,7 @@ export default function VeraThread() {
       ensureDraftInActiveProject(draft)
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error) throw error
-      const reviewedBy = user?.email ?? user?.id ?? 'VERA operator'
+      const reviewedBy = user?.email ?? user?.id ?? 'SONA operator'
       let updated: Post | null = null
 
       if (session?.access_token) {
@@ -1582,7 +1582,7 @@ export default function VeraThread() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={onKey}
             rows={1}
-            placeholder="Ask Vera anything..."
+            placeholder="Ask Sona anything..."
             disabled={!activeProject}
             style={{ width: '100%', resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontFamily: t.family.sans, fontSize: idle ? t.size.h4 : t.size.lg, lineHeight: 1.5, color: color.ink, minHeight: idle ? 118 : 100, maxHeight: 240, paddingTop: 2 }}
           />
@@ -1592,7 +1592,7 @@ export default function VeraThread() {
               style={{ width: 30, height: 30, borderRadius: '50%', border: `0.5px solid ${color.line}`, background: 'transparent', color: color.ghost, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: uploading ? 'default' : 'pointer', flexShrink: 0 }}>
               <Paperclip size={14} />
             </button>
-            <span style={{ flex: 1, fontSize: t.size.cap, color: color.faint, letterSpacing: '0.01em', userSelect: 'none' }}>Vera drafts, you approve</span>
+            <span style={{ flex: 1, fontSize: t.size.cap, color: color.faint, letterSpacing: '0.01em', userSelect: 'none' }}>Sona drafts, you approve</span>
             {streaming ? (
               <button onClick={() => abortRef.current?.abort()} title="Stop"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: radius.pill, border: 'none', cursor: 'pointer', background: color.ink, color: '#fff', fontSize: t.size.sm, fontWeight: t.weight.medium }}>
@@ -1895,7 +1895,7 @@ function DraftMediaStoryboard({ draft, spec }: { draft: Post; spec: DraftSpec })
           Media
         </div>
         <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5 }}>
-          No media attached yet. Ask VERA for a platform prompt, carousel, or storyboard before rendering paid media.
+          No media attached yet. Ask SONA for a platform prompt, carousel, or storyboard before rendering paid media.
         </p>
       </section>
     )
@@ -2306,7 +2306,7 @@ function VeraAvatar({ size, hero = false }: { size: number; hero?: boolean }) {
   }
   return (
     <span style={{ ...frame, background: hero ? 'var(--accent-tint)' : color.accent }}>
-      <img src="/vera-avatar.png" alt="Vera" onError={() => setBroken(true)}
+      <img src="/vera-avatar.png" alt="Sona" onError={() => setBroken(true)}
         style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
     </span>
   )

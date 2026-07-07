@@ -1,4 +1,4 @@
-// Button — VERA's canonical action affordance.
+// Button — SONA's canonical action affordance.
 //
 // Per the design system: ONE primary per surface. Ghost for inline /
 // cancel. Danger only on destructive confirm. The shortcut chip ([⌘K]

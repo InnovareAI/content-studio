@@ -570,7 +570,7 @@ export default function AcrossClients() {
       <PageHeader
         eyebrow={activeOrg?.name ?? 'Workspace'}
         title="Spaces"
-        subtitle="Triage VERA's open work, then switch between spaces."
+        subtitle="Triage SONA's open work, then switch between spaces."
         actions={
           <Button
             variant="primary"
@@ -720,7 +720,7 @@ export default function AcrossClients() {
                     <PanelTitle
                       icon={<KeyRound size={16} />}
                       title="Provider keys"
-                      subtitle="Store one encrypted key per provider and label. Vera syncs model metadata when the provider allows it."
+                      subtitle="Store one encrypted key per provider and label. Sona syncs model metadata when the provider allows it."
                     />
                     <div style={{ padding: space[5], borderTop: `1px solid ${color.line}` }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(180px, 1fr)', gap: space[3], marginBottom: space[3] }}>
@@ -810,7 +810,7 @@ function AgendaPanel({
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: space[2], marginBottom: space[2] }}>
             <Sparkles size={15} color={color.accent} />
-            <SectionLabel count={observations.length}>VERA agenda</SectionLabel>
+            <SectionLabel count={observations.length}>SONA agenda</SectionLabel>
           </div>
           <p style={{ margin: 0, maxWidth: 700, color: color.ink2, fontSize: t.size.sm, lineHeight: t.lineHeight.relaxed }}>
             Open connector issues, learning reviews, knowledge gaps, and draft opportunities across every space.
@@ -823,7 +823,7 @@ function AgendaPanel({
 
       {shown.length === 0 ? (
         <div style={{ borderTop: `1px solid ${color.line}`, padding: space[5], color: color.ghost, fontSize: t.size.sm }}>
-          No open VERA agenda items across spaces.
+          No open SONA agenda items across spaces.
         </div>
       ) : (
         <div>
@@ -1377,7 +1377,7 @@ function agendaActionLabel(obs: ShelfObservation) {
   if (obs.action_kind === 'open_integrations') return 'Open integration'
   if (obs.action_kind === 'review_weekly_learning' || obs.kind === 'weekly_learning') return 'Review learning'
   if (obs.action_kind === 'prompt_knowledge_input') return 'Open brain'
-  if (obs.action_kind === 'draft_from_campaign') return 'Open VERA'
+  if (obs.action_kind === 'draft_from_campaign') return 'Open SONA'
   return obs.proposed_action ? 'Open' : 'Open space'
 }
 

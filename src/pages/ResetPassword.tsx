@@ -59,7 +59,7 @@ export default function ResetPassword() {
       <div style={{ width: '100%', maxWidth: 380 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
           <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>V</span>
-          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>VERA</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>SONA</span>
         </div>
 
         <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)', padding: 28 }}>
@@ -70,14 +70,14 @@ export default function ResetPassword() {
               </span>
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', margin: '0 0 6px' }}>Password updated</h2>
               <p style={{ fontSize: 13.5, color: 'var(--ghost)', lineHeight: 1.5, margin: 0 }}>
-                Taking you back into VERA.
+                Taking you back into SONA.
               </p>
             </div>
           ) : (
             <>
               <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink)', margin: '0 0 4px' }}>Set a new password</h2>
               <p style={{ fontSize: 13.5, color: 'var(--ghost)', margin: '0 0 22px', lineHeight: 1.5 }}>
-                Choose a password for your VERA account.
+                Choose a password for your SONA account.
               </p>
 
               <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -126,7 +126,7 @@ export default function ResetPassword() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--faint)', marginTop: 18 }}>
-          One sign-in for VERA and InnovareAI apps.
+          One sign-in for SONA and InnovareAI apps.
         </p>
       </div>
     </div>

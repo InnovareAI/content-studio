@@ -119,7 +119,7 @@ function PageFallback({ error, onReset }: { error: Error; onReset: () => void })
           Something didn't work
         </h1>
         <p className="text-[13px] mb-6" style={{ color: 'var(--ghost)' }}>
-          VERA hit an unexpected error. The issue has been logged. You can try
+          SONA hit an unexpected error. The issue has been logged. You can try
           again, or head back to the dashboard.
         </p>
 
@@ -183,7 +183,7 @@ function RouteFallback({ error, onReset }: { error: Error; onReset: () => void }
               This page didn't load
             </h2>
             <p className="text-[13px] mt-1" style={{ color: 'var(--ghost)' }}>
-              Something went wrong rendering this view. The rest of VERA is
+              Something went wrong rendering this view. The rest of SONA is
               still working — try again, or pick a different section from the rail.
             </p>
           </div>

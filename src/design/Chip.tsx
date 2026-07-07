@@ -1,4 +1,4 @@
-// Chip — VERA's status pill primitive.
+// Chip — SONA's status pill primitive.
 //
 // THE color rule (baked into the design system):
 //   "The dot carries meaning, the body never. Don't ship a green-filled chip."

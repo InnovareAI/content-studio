@@ -1,10 +1,10 @@
-// Brain — the per-client ground truth VERA reasons from (/p/:slug/brain).
+// Brain — the per-client ground truth SONA reasons from (/p/:slug/brain).
 //
 // · Custom instructions — per project; vera-chat reads them EVERY turn. The
 //   single highest-leverage per-client lever.
 // · Brand voice — tone, rules, forbidden phrases, persona (space-scoped, with
 //   a workspace fallback only as a starter draft).
-// · Audiences — who VERA writes toward for this space.
+// · Audiences — who SONA writes toward for this space.
 // · Knowledge — link to the space's searchable sources (managed in Knowledge;
 //   brand-kit files live in Artifacts).
 
@@ -472,7 +472,7 @@ function SourceKnowledgePanel({
 
       {!rows.length && !loading && !error && (
         <div style={{ color: color.ghost, fontSize: t.size.cap, lineHeight: 1.5 }}>
-          Pull sources to store the website and social material VERA can use in chat.
+          Pull sources to store the website and social material SONA can use in chat.
         </div>
       )}
 
@@ -779,7 +779,7 @@ function BrainReadinessPanel({
   const recommendation = sourceCount === 0
     ? {
       title: 'Start with the company URL.',
-      body: 'Add the website first, then pull owned and social sources so VERA can build strategy from evidence instead of guesses.',
+      body: 'Add the website first, then pull owned and social sources so SONA can build strategy from evidence instead of guesses.',
       tone: color.warn,
     }
     : readiness < 70
@@ -791,7 +791,7 @@ function BrainReadinessPanel({
       : measuredPosts === 0
         ? {
           title: 'Create or import measured content next.',
-          body: 'The strategy model is usable. VERA now needs content and performance signals to learn what works for this space.',
+          body: 'The strategy model is usable. SONA now needs content and performance signals to learn what works for this space.',
           tone: color.accent,
         }
         : {
@@ -829,13 +829,13 @@ function BrainReadinessPanel({
           <aside style={{ border: `1px solid ${color.line}`, borderRadius: radius.md, background: color.paper2, padding: space[4], display: 'grid', gap: space[3] }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: space[2], color: recommendation.tone, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
               <Sparkles size={13} />
-              VERA recommendation
+              SONA recommendation
             </div>
             <div style={{ color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold, lineHeight: 1.4 }}>{recommendation.title}</div>
             <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5 }}>{recommendation.body}</p>
             <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap' }}>
               <Button variant="secondary" size="sm" onClick={onDraft} disabled={drafting}>
-                {drafting ? <><Loader2 size={13} className="animate-spin" /> Drafting...</> : <><Sparkles size={13} /> Draft with VERA</>}
+                {drafting ? <><Loader2 size={13} className="animate-spin" /> Drafting...</> : <><Sparkles size={13} /> Draft with SONA</>}
               </Button>
               <Button variant="secondary" size="sm" onClick={onPullSources} disabled={pullingSources || sourceCount === 0}>
                 {pullingSources ? <Loader2 size={13} /> : <RefreshCw size={13} />}
@@ -863,7 +863,7 @@ function BrainReadinessPanel({
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: space[3], marginBottom: space[4], flexWrap: 'wrap' }}>
             <div>
               <div style={{ color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold }}>Knowledge and source map</div>
-              <p style={{ margin: `${space[1]} 0 0`, color: color.ghost, fontSize: t.size.micro, lineHeight: 1.45 }}>Website, social channels, and content hubs VERA can use as evidence.</p>
+              <p style={{ margin: `${space[1]} 0 0`, color: color.ghost, fontSize: t.size.micro, lineHeight: 1.45 }}>Website, social channels, and content hubs SONA can use as evidence.</p>
             </div>
             <Chip dot={gaps.length ? color.warn : color.success}>{gaps.length ? `${gaps.length} source gaps` : 'Sources covered'}</Chip>
           </div>
@@ -906,7 +906,7 @@ function BrainReadinessPanel({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3], flexWrap: 'wrap', marginBottom: space[3] }}>
           <div>
             <div style={{ color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold }}>Learning evidence</div>
-            <p style={{ margin: `${space[1]} 0 0`, color: color.ghost, fontSize: t.size.micro, lineHeight: 1.4 }}>Posts and metrics VERA can use to improve channel strategy.</p>
+            <p style={{ margin: `${space[1]} 0 0`, color: color.ghost, fontSize: t.size.micro, lineHeight: 1.4 }}>Posts and metrics SONA can use to improve channel strategy.</p>
           </div>
           <Chip dot={signalScore ? color.accent : color.ghost}>signal score {signalScore}</Chip>
         </div>
@@ -915,7 +915,7 @@ function BrainReadinessPanel({
         ) : learningError ? (
           <p style={{ margin: 0, color: color.danger, fontSize: t.size.cap }}>{learningError}</p>
         ) : totalPosts === 0 ? (
-          <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap }}>No channel posts found yet. Once content is created or imported, this panel will show where VERA has evidence.</p>
+          <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap }}>No channel posts found yet. Once content is created or imported, this panel will show where SONA has evidence.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: space[3] }}>
             {evidenceRows.map(({ platform, evidence }) => (
@@ -1113,7 +1113,7 @@ function ActiveChannelSelector({
         <div>
           <div style={{ color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold }}>Active channels</div>
           <p style={{ margin: `${space[1]} 0 0`, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.45, maxWidth: 680 }}>
-            These are the channels Vera can treat as strategy-valid for this space. If none are saved, Vera infers from source URLs, strategy text, and content history.
+            These are the channels Sona can treat as strategy-valid for this space. If none are saved, Sona infers from source URLs, strategy text, and content history.
           </p>
         </div>
         <div style={{ display: 'flex', gap: space[2], alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1468,7 +1468,7 @@ export default function Brain() {
   const addTo = (key: keyof BrandVoice, val: string) => { if (val.trim()) setBv(p => ({ ...p, [key]: [...((p[key] as string[]) || []), val.trim()] })) }
   const rmFrom = (key: keyof BrandVoice, i: number) => setBv(p => ({ ...p, [key]: ((p[key] as string[]) || []).filter((_, x) => x !== i) }))
 
-  // ── agentic draft: Vera reads the client's content (content-audit) and
+  // ── agentic draft: Sona reads the client's content (content-audit) and
   // proposes Brain fields plus brand voice. The operator reviews and
   // saves. Agentic-first means the brain should not start as a blank form. ──
   const [drafting, setDrafting] = useState(false)
@@ -1622,7 +1622,7 @@ export default function Brain() {
   }, [activeProject?.id])
   useEffect(() => { reloadAudiences() }, [reloadAudiences])
 
-  // ── content categories (per-client buckets — Vera tags posts, Calendar/Artifacts filter) ──
+  // ── content categories (per-client buckets — Sona tags posts, Calendar/Artifacts filter) ──
   const [categories, setCategories] = useState<{ id: string; name: string; color: string | null }[]>([])
   const [catName, setCatName] = useState('')
   const reloadCategories = useCallback(() => {
@@ -1870,7 +1870,7 @@ export default function Brain() {
               <Textarea value={business.contentGoals} onChange={e => updateBusiness('contentGoals', e.target.value)} rows={3} placeholder="Awareness, trust, traffic, community, leads, sales, recruiting, launches, events, campaign themes." />
             </Field>
             <Field label="Speaker strategy">
-              <Textarea value={business.speakerStrategy} onChange={e => updateBusiness('speakerStrategy', e.target.value)} rows={3} placeholder="Who VERA can write as: brand, founder, creator, product expert, client team, or a named person. Define when each voice should be used." />
+              <Textarea value={business.speakerStrategy} onChange={e => updateBusiness('speakerStrategy', e.target.value)} rows={3} placeholder="Who SONA can write as: brand, founder, creator, product expert, client team, or a named person. Define when each voice should be used." />
             </Field>
             <Field label="Platform tone of voice">
               <Textarea value={business.platformToneOfVoice} onChange={e => updateBusiness('platformToneOfVoice', e.target.value)} rows={3} placeholder="What changes by medium: LinkedIn authority, YouTube explainer, Medium essay, Quora answer, Reddit community-safe, Instagram visual proof, X concise POV." />
@@ -1886,7 +1886,7 @@ export default function Brain() {
             <Button variant="primary" size="md" onClick={saveInstr} disabled={instrSaving} style={{ background: color.ink, color: color.surface }}>
               {instrSaving ? <Loader2 size={14} /> : <Check size={14} />} Save business context
             </Button>
-            {instrSaved && <span style={{ fontSize: t.size.cap, color: color.success }}>VERA uses this from the next turn.</span>}
+            {instrSaved && <span style={{ fontSize: t.size.cap, color: color.success }}>SONA uses this from the next turn.</span>}
           </div>
         </div>
 
@@ -1898,7 +1898,7 @@ export default function Brain() {
       <section id="brain-instructions" style={{ marginBottom: space[9], scrollMarginTop: space[12] }}>
         <SectionLabel style={{ marginBottom: space[2] }}>Custom instructions</SectionLabel>
         <p style={{ fontSize: t.size.cap, color: color.ink2, lineHeight: 1.5, margin: `0 0 ${space[3]}` }}>
-          The standing brief VERA reads <strong style={{ color: color.ink }}>every turn</strong>.
+          The standing brief SONA reads <strong style={{ color: color.ink }}>every turn</strong>.
         </p>
         <Textarea value={instr} onChange={e => setInstr(e.target.value)} rows={7}
           placeholder={`e.g. Write in a confident, practical voice for experienced operators. Lead with a concrete observation or real failure mode, never a hypothetical. Avoid "leverage", "synergy", "game-changer". Close with one sharp question when the channel supports it.`} />
@@ -1906,7 +1906,7 @@ export default function Brain() {
           <Button variant="primary" size="md" onClick={saveInstr} disabled={instrSaving} style={{ background: color.ink, color: color.surface }}>
             {instrSaving ? <Loader2 size={14} /> : <Check size={14} />} Save instructions
           </Button>
-          {instrSaved && <span style={{ fontSize: t.size.cap, color: color.success }}>Saved. VERA uses this from the next turn.</span>}
+          {instrSaved && <span style={{ fontSize: t.size.cap, color: color.success }}>Saved. SONA uses this from the next turn.</span>}
         </div>
       </section>
 
@@ -1921,7 +1921,7 @@ export default function Brain() {
         <div style={{ display: 'grid', gap: space[4] }}>
           <Field label="Persona name"><Input value={bv.persona_name ?? ''} onChange={e => setBv(f => ({ ...f, persona_name: e.target.value }))} placeholder="e.g. Alex" /></Field>
           <Field label="Persona descriptor"><Input value={bv.persona_descriptor ?? ''} onChange={e => setBv(f => ({ ...f, persona_descriptor: e.target.value }))} placeholder="A sharp, empathetic content strategist" /></Field>
-          <Field label="User tone of voice" helper="How the person or brand should sound when VERA writes for them.">
+          <Field label="User tone of voice" helper="How the person or brand should sound when SONA writes for them.">
             <Textarea value={bv.system_prompt ?? ''} onChange={e => setBv(f => ({ ...f, system_prompt: e.target.value }))} rows={4} placeholder="Direct, practical, warm, lightly opinionated. Uses short sentences, concrete examples, and avoids hype." />
           </Field>
           <TagInput label="Tone words" placeholder="confident, direct…" items={(bv.tone as string[]) ?? []} onAdd={v => addTo('tone', v)} onRemove={i => rmFrom('tone', i)} />
@@ -1952,7 +1952,7 @@ export default function Brain() {
           )}
           {audiences.map(a => <AudienceEditor key={a.id} initial={a} orgId={activeOrg?.id ?? ''} projectId={activeProject?.id ?? ''} onSaved={reloadAudiences} />)}
           {audiences.length === 0 && !addingAudience && (
-            <p style={{ fontSize: t.size.cap, color: color.ghost }}>No audiences yet. Add one so VERA writes toward a specific reader.</p>
+            <p style={{ fontSize: t.size.cap, color: color.ghost }}>No audiences yet. Add one so SONA writes toward a specific reader.</p>
           )}
         </div>
       </section>
@@ -1994,7 +1994,7 @@ export default function Brain() {
           <BookOpen size={18} style={{ color: color.accent, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: t.size.cap, fontWeight: t.weight.medium, color: color.ink }}>Manage knowledge sources →</div>
-            <div style={{ fontSize: t.size.micro, color: color.ghost }}>Paste, URLs, and docs VERA can search and cite.</div>
+            <div style={{ fontSize: t.size.micro, color: color.ghost }}>Paste, URLs, and docs SONA can search and cite.</div>
           </div>
         </Link>
       </section>

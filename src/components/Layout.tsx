@@ -1,12 +1,12 @@
-// VERA shell — modeled on SAM's layout (sam.innovareai.com):
-//   · narrow white left rail: the AI ("Vera") at top, a flat icon+label nav,
+// SONA shell — modeled on SAM's layout (sam.innovareai.com):
+//   · narrow white left rail: the AI ("Sona") at top, a flat icon+label nav,
 //     a spacer, then a utility group + the signed-in user
 //   · the active item carries a SOLID coral fill (SAM's hallmark)
 //   · center is just the canvas (<Outlet/>) — the conversation lives on the
-//     Vera tab as the 3-pane surface
+//     Sona tab as the 3-pane surface
 //   · right rail = a full post preview, supplied by the page via useRightRail
 //
-// Labels are VERA's content-side equivalents of SAM's sales rail.
+// Labels are SONA's content-side equivalents of SAM's sales rail.
 
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
@@ -109,7 +109,7 @@ function RailLabel({ children }: { children: string }) {
 
 // Recents — the active client's past chats, surfaced in the rail (tester
 // request). Clicking one resumes that session: set the per-client session key,
-// route to Vera, and signal VeraThread (already-mounted case) to switch.
+// route to Sona, and signal VeraThread (already-mounted case) to switch.
 type RailSession = { session_id: string; title: string | null; last_at: string; message_count: number }
 const RECENT_TITLE_MAX = 42
 function compactRecentTitle(raw: string | null) {
@@ -413,7 +413,7 @@ export default function Layout() {
   // the choice persists across navigations + reloads.
   const [railOpen, setRailOpen] = useState(() => { try { return localStorage.getItem('vera-rail-open') !== '0' } catch { return true } })
   const toggleRail = (open: boolean) => { setRailOpen(open); try { localStorage.setItem('vera-rail-open', open ? '1' : '0') } catch { /* ignore */ } }
-  // When Vera produces an artifact (draft/campaign), reveal the rail so the
+  // When Sona produces an artifact (draft/campaign), reveal the rail so the
   // output is visible even if the operator had collapsed it.
   useEffect(() => {
     const open = () => toggleRail(true)
@@ -561,7 +561,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* ── Center ── the canvas (conversation lives on the Vera tab). */}
+      {/* ── Center ── the canvas (conversation lives on the Sona tab). */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <main className="flex-1 overflow-y-auto min-h-0" style={{ background: 'var(--paper)' }}>
           <ErrorBoundary variant="route" resetKey={location.pathname}>

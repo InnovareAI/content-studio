@@ -1,4 +1,4 @@
-// EmptyState — VERA's canonical empty surface.
+// EmptyState — SONA's canonical empty surface.
 //
 // Per the design system, every "nothing here" state follows this shape:
 //   1. Single icon (line-style, 22px, faint)

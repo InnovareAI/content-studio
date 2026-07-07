@@ -266,12 +266,12 @@ export function textSpendEstimate(model: string | null | undefined, provider: Te
 
 export function imageSpendEstimate(model: string, enabled: boolean, ready: boolean, premium: boolean, catalog?: ModelPricingGuide[]): SpendEstimate {
   if (!enabled) return { label: 'No spend', detail: 'Image generation is disabled for this space.' }
-  if (!ready) return { label: 'No spend', detail: 'VERA will keep this as a prompt or production brief.' }
+  if (!ready) return { label: 'No spend', detail: 'SONA will keep this as a prompt or production brief.' }
   const guide = findPricingGuide(pricingCatalog(catalog), 'image.generate', model)
   if (guide) return { label: guide.estimateLabel, detail: guide.estimateDetail }
   return {
     label: premium ? 'premium quote required' : 'provider quote required',
-    detail: 'This model needs normalized provider pricing before VERA can show a numeric estimate.',
+    detail: 'This model needs normalized provider pricing before SONA can show a numeric estimate.',
   }
 }
 
@@ -380,7 +380,7 @@ export function buildModelRecommendations(input: ModelRecommendationInput, catal
         provider: input.hasFal ? 'Space FAL policy locked' : 'Space FAL required',
         status: 'No render',
         estimate: videoSpendEstimate(input.defaultVideoModel, false, false, catalog),
-        reason: 'Video is the cost sink. Vera should storyboard, frame, prompt, and estimate before any real clip is rendered.',
+        reason: 'Video is the cost sink. Sona should storyboard, frame, prompt, and estimate before any real clip is rendered.',
         escalation: 'Enable standard video only with a space FAL key and a monthly cap.',
         tone: 'warn',
         requiresApproval: false,

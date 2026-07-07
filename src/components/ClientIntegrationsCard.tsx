@@ -187,14 +187,14 @@ const PROVIDERS: IntegrationTemplate[] = [
     group: 'Organic social',
     label: 'LinkedIn',
     eyebrow: 'Unipile OAuth',
-    description: 'Connect LinkedIn through the Unipile OAuth Wizard, then publish and analyze personal or company content from Vera.',
+    description: 'Connect LinkedIn through the Unipile OAuth Wizard, then publish and analyze personal or company content from Sona.',
     connectionKind: 'oauth',
     credentialRoute: 'Unipile Hosted Auth Wizard for LinkedIn account connection',
     primaryLabel: 'LinkedIn profile or company URL',
     primaryPlaceholder: 'https://linkedin.com/company/brand',
     scopes: ['unipile.linkedin.account', 'posts.read', 'posts.write', 'profile.read'],
     capabilities: { read: true, ingest: true, analyze: true, publish: true, upload_media: true, schedule: true },
-    setupNote: 'Use the Unipile OAuth Wizard for LinkedIn personal and company access. Vera stores only the Unipile account reference in this registry.',
+    setupNote: 'Use the Unipile OAuth Wizard for LinkedIn personal and company access. Sona stores only the Unipile account reference in this registry.',
     launch: {
       priority: 'wave_1',
       workstream: 'LinkedIn',
@@ -1079,7 +1079,7 @@ export function ClientIntegrationsCard() {
 
   async function removeIntegration() {
     if (!selectedRow) return
-    if (!confirm(`Remove ${selectedRow.display_name}? Vera will stop seeing this integration for this space.`)) return
+    if (!confirm(`Remove ${selectedRow.display_name}? Sona will stop seeing this integration for this space.`)) return
     setSaving(true)
     setMessage(null)
     const { error } = await supabase.from('client_integrations').delete().eq('id', selectedRow.id)
@@ -1403,7 +1403,7 @@ export function ClientIntegrationsCard() {
             Agentic integrations
           </p>
           <p style={{ color: 'var(--ink-2)', fontSize: 'var(--t-sm)', lineHeight: 1.5, margin: '5px 0 0', maxWidth: 680 }}>
-            Register organic social, content platforms, search, analytics, WordPress, and CMS routes per space. Vera reads these capability records before she analyzes, ingests, or publishes anything.
+            Register organic social, content platforms, search, analytics, WordPress, and CMS routes per space. Sona reads these capability records before she analyzes, ingests, or publishes anything.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-2 min-w-[300px]">
@@ -1436,7 +1436,7 @@ export function ClientIntegrationsCard() {
                 Shared LinkedIn research profile
               </p>
               <p style={{ color: 'var(--ink-2)', fontSize: 12, lineHeight: 1.45, margin: '4px 0 0', maxWidth: 760 }}>
-                Vera uses this only for read-only LinkedIn research: audits, source pulls, profile context, company-page context, and recent-post intelligence. It never grants publishing, media, spend, or company-page posting rights. Publishing still requires the active space LinkedIn integration below.
+                Sona uses this only for read-only LinkedIn research: audits, source pulls, profile context, company-page context, and recent-post intelligence. It never grants publishing, media, spend, or company-page posting rights. Publishing still requires the active space LinkedIn integration below.
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span style={{
@@ -1910,7 +1910,7 @@ export function ClientIntegrationsCard() {
                 onChange={event => updateDraft(prev => ({ ...prev, approvalRequired: event.target.checked }))}
                 className="mt-1"
               />
-              Require human approval before publish, destructive edits, or sending data outside Vera.
+              Require human approval before publish, destructive edits, or sending data outside Sona.
             </label>
 
             <Labelled label="Notes for adapter setup">

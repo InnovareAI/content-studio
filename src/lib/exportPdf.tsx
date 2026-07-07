@@ -1,4 +1,4 @@
-// Selectable-text PDF export. Renders a Vera result's Markdown into real PDF
+// Selectable-text PDF export. Renders a Sona result's Markdown into real PDF
 // primitives via @react-pdf/renderer — so the text is selectable/searchable,
 // generated images embed inline, tables render, and links (incl. video links)
 // are genuinely clickable. The whole module is lazy-loaded by the caller, so

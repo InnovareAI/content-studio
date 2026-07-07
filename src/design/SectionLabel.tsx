@@ -1,11 +1,11 @@
 // SectionLabel — the 10-11px UPPERCASE label that introduces every list
-// or group in VERA. Per the design system, this is the visual rhythm
+// or group in SONA. Per the design system, this is the visual rhythm
 // driver — every content group has one above it.
 //
 // Variants:
 //   · default — ghost color
 //   · accent  — accent color (only for high-attention groups like
-//               "What VERA noticed" with open items)
+//               "What SONA noticed" with open items)
 //
 // Slots:
 //   · count   — inline count after the label, e.g. PROJECT KNOWLEDGE 14

@@ -1,4 +1,4 @@
-// Card — VERA's canonical raised surface.
+// Card — SONA's canonical raised surface.
 //
 // Three tones:
 //   · default — surface white, hairline border. The standard container.

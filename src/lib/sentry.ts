@@ -31,7 +31,7 @@ export function initSentry(): void {
 
   Sentry.init({
     dsn,
-    // VERA is small enough that we don't need performance tracing today —
+    // SONA is small enough that we don't need performance tracing today —
     // crash visibility is the whole goal. Sampling can be turned on later
     // by passing tracesSampleRate > 0 here.
     tracesSampleRate: 0,

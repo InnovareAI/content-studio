@@ -87,7 +87,7 @@ function WorkspaceTab() {
           <input value={form.website} onChange={e => setForm(f => ({...f, website: e.target.value}))}
             className="input" placeholder="https://innovareai.com" />
         </Field>
-        <Field label="Industry" hint="Helps VERA tailor content">
+        <Field label="Industry" hint="Helps SONA tailor content">
           <input value={form.industry} onChange={e => setForm(f => ({...f, industry: e.target.value}))}
             className="input" placeholder="AI / Technology" />
         </Field>
@@ -651,7 +651,7 @@ function AiUsageTab() {
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
             <p className="text-sm font-medium text-gray-800">Model selection source</p>
-            <p className="text-xs text-gray-500 mt-0.5">Filter usage by how Vera chose the model before generation.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Filter usage by how Sona chose the model before generation.</p>
           </div>
           {selectionSourceFilter !== 'all' && (
             <button

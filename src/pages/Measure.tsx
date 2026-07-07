@@ -530,7 +530,7 @@ export default function Measure() {
       <PageHeader
         eyebrow={activeProject?.name ?? activeOrg?.name ?? 'Workspace'}
         title="Demand Performance"
-        subtitle="A working dashboard for output, bottlenecks, post results, engagement signals, traffic, and the next actions Vera should take."
+        subtitle="A working dashboard for output, bottlenecks, post results, engagement signals, traffic, and the next actions Sona should take."
         actions={(
           <Button
             variant="secondary"
@@ -633,7 +633,7 @@ export default function Measure() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 0.45fr)', gap: space[6], alignItems: 'start', marginTop: space[8] }}>
             <section>
-              <SectionLabel style={{ marginBottom: space[3] }}>Vera insights</SectionLabel>
+              <SectionLabel style={{ marginBottom: space[3] }}>Sona insights</SectionLabel>
               <InsightGrid insights={insights} />
             </section>
             <section>
@@ -1245,7 +1245,7 @@ function RedditListeningPanel({ topic, onTopic, listening, error, onRun, listens
   return (
     <div style={card}>
       <p style={{ fontSize: t.size.cap, color: color.ghost, margin: `0 0 ${space[3]}`, lineHeight: 1.5 }}>
-        Pull what people are actually saying on Reddit about a topic. VERA reads and summarizes, it never posts. Use the pain points and phrasing to sharpen posts, answers, landing pages, and campaign angles.
+        Pull what people are actually saying on Reddit about a topic. SONA reads and summarizes, it never posts. Use the pain points and phrasing to sharpen posts, answers, landing pages, and campaign angles.
       </p>
       <div style={{ display: 'flex', gap: space[2], alignItems: 'flex-start' }}>
         <input
@@ -1935,7 +1935,7 @@ function buildInsights(input: {
   } else if (input.stats.measured === 0) {
     insights.push({
       title: 'Metrics need provider IDs',
-      body: 'Published posts exist, but Vera has no usable provider snapshots yet. Save provider IDs at publish time before sync can become reliable.',
+      body: 'Published posts exist, but Sona has no usable provider snapshots yet. Save provider IDs at publish time before sync can become reliable.',
       tone: color.warn,
       icon: Activity,
     })
@@ -1968,7 +1968,7 @@ function buildInsights(input: {
   if (!insights.length) {
     insights.push({
       title: 'Ready for performance data',
-      body: 'The dashboard is prepared. Once provider snapshots land, Vera can compare platforms, campaigns, and post formats.',
+      body: 'The dashboard is prepared. Once provider snapshots land, Sona can compare platforms, campaigns, and post formats.',
       tone: color.success,
       icon: Zap,
     })

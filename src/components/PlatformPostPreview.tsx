@@ -541,7 +541,7 @@ type Profile = {
 }
 
 function previewProfile(): Profile {
-  const name = 'Vera'
+  const name = 'Sona'
   return {
     name,
     subtitle: 'Content Generator',

@@ -334,7 +334,7 @@ export default function LinkedInScore() {
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium transition-colors"
                 style={{ border: '1px solid var(--paper-edge)', color: 'var(--ink-quiet)', borderRadius: 'var(--radius-md)' }}
               >
-                Back to Vera
+                Back to Sona
               </button>
             </div>
           )}

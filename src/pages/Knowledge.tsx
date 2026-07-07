@@ -1,4 +1,4 @@
-// Project Knowledge — operator drops everything they want VERA to absorb:
+// Project Knowledge — operator drops everything they want SONA to absorb:
 // pasted text, URLs to pull, files to upload (text, markdown, PDF, DOCX,
 // images, logos, fonts).
 //
@@ -7,11 +7,11 @@
 //   · URL — fetch a public page, strip HTML, ingest
 //   · File upload — drag-drop or click. Text files get ingested into
 //     project_knowledge AND stored as assets. Binary files (PDF, images,
-//     fonts, etc) get stored as assets only — VERA can reference them
+//     fonts, etc) get stored as assets only — SONA can reference them
 //     but can't read their contents yet (server-side parse is Phase 4).
 //
 // Below the input row: split view —
-//   · Knowledge (text-based, retrievable by VERA semantic search)
+//   · Knowledge (text-based, retrievable by SONA semantic search)
 //   · Assets   (raw files — logos, PDFs, images)
 //
 // Per row: delete affordance, download (signed URL), title/source.
@@ -56,7 +56,7 @@ interface KnowledgeRow {
   file_size: number | null
   created_at: string
   updated_at: string
-  // VERA-classified fields (populated async after ingest by project-ingest)
+  // SONA-classified fields (populated async after ingest by project-ingest)
   kind: 'brief' | 'voice' | 'audit' | 'positioning' | 'case_study' | 'intel' | 'reference' | 'source_pull' | 'other' | null
   summary: string | null
   suggestion: string | null
@@ -293,7 +293,7 @@ export default function Knowledge() {
 
   useEffect(() => { load() }, [load])
 
-  // Poll while any knowledge entry is still being classified by VERA
+  // Poll while any knowledge entry is still being classified by SONA
   // (classification fires after upload and typically lands in 1-3s).
   useEffect(() => {
     const pending = knowledge.some(k => k.kind !== 'source_pull' && !k.classified_at)
@@ -411,7 +411,7 @@ export default function Knowledge() {
   }
 
   async function deleteKnowledge(id: string) {
-    if (!confirm('Delete this knowledge entry? VERA will lose access.')) return
+    if (!confirm('Delete this knowledge entry? SONA will lose access.')) return
     await supabase.from('project_knowledge').delete().eq('id', id)
     load()
   }
@@ -514,7 +514,7 @@ export default function Knowledge() {
       <PageHeader
         eyebrow={activeProject.name}
         title="Knowledge"
-        subtitle="Sources VERA can search and cite for this space."
+        subtitle="Sources SONA can search and cite for this space."
         size="md"
         style={{ marginBottom: space[7] }}
       />
@@ -567,7 +567,7 @@ export default function Knowledge() {
             </Field>
             <Field>
               <Textarea
-                placeholder="Paste a brief, brand voice doc, positioning, audience notes, anything VERA should know about this project…"
+                placeholder="Paste a brief, brand voice doc, positioning, audience notes, anything SONA should know about this project…"
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
                 rows={8}
@@ -698,10 +698,10 @@ export default function Knowledge() {
                   <div className="flex-1 min-w-0">
                     <p className="text-[13.5px] truncate" style={{ color: 'var(--ink)' }}>{k.title}</p>
 
-                    {/* VERA's classification summary — speaks back what she found */}
+                    {/* SONA's classification summary — speaks back what she found */}
                     {k.summary && (
                       <p className="text-[12.5px] mt-1 leading-snug" style={{ color: 'var(--ink-quiet)' }}>
-                        <span style={{ color: 'var(--ink)' }}>VERA</span> · {k.summary}
+                        <span style={{ color: 'var(--ink)' }}>SONA</span> · {k.summary}
                       </p>
                     )}
 
@@ -827,14 +827,14 @@ export default function Knowledge() {
         <EmptyState
           icon={<FileText size={22} strokeWidth={1.5} />}
           title="Nothing absorbed yet"
-          body="Drop your first brief, brand voice doc, or logo above. VERA will classify it and pull it into chat by relevance."
+          body="Drop your first brief, brand voice doc, or logo above. SONA will classify it and pull it into chat by relevance."
         />
       )}
     </div>
   )
 }
 
-// ─── KindBadge — VERA's classification of a knowledge entry ──────────
+// ─── KindBadge — SONA's classification of a knowledge entry ──────────
 const KIND_LABEL: Record<string, string> = {
   brief:       'Brief',
   voice:       'Voice',
@@ -852,7 +852,7 @@ function KindBadge({ kind, classified, indexed }: { kind: KnowledgeRow['kind']; 
       <span
         className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 inline-flex items-center gap-1"
         style={{ background: 'var(--fog)', color: 'var(--ghost)', letterSpacing: '0.06em' }}
-        title="VERA is reading…"
+        title="SONA is reading…"
       >
         <Loader2 size={9} className="animate-spin" /> Reading
       </span>

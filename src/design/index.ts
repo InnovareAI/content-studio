@@ -1,4 +1,4 @@
-// VERA design system — barrel export.
+// SONA design system — barrel export.
 //
 // Import from '@/design' (or '../design') instead of individual files:
 //   import { Button, Card, SectionLabel, color, space } from '../design'

@@ -522,7 +522,7 @@ export default function Artifacts() {
 
       {cat === 'images' && (
         filteredImages.length === 0 ? (
-          <EmptyState icon={<ImageIcon size={22} strokeWidth={1.5} />} title="No images yet" body="Images Vera generates for this space's posts show up here." />
+          <EmptyState icon={<ImageIcon size={22} strokeWidth={1.5} />} title="No images yet" body="Images Sona generates for this space's posts show up here." />
         ) : (
           <MediaGrid posts={filteredImages} type="image" onOpen={open} />
         )
@@ -530,7 +530,7 @@ export default function Artifacts() {
 
       {cat === 'videos' && (
         filteredVideos.length === 0 ? (
-          <EmptyState icon={<Clapperboard size={22} strokeWidth={1.5} />} title="No videos yet" body="Clips Vera renders for this space show up here." />
+          <EmptyState icon={<Clapperboard size={22} strokeWidth={1.5} />} title="No videos yet" body="Clips Sona renders for this space show up here." />
         ) : (
           <MediaGrid posts={filteredVideos} type="video" onOpen={open} />
         )
@@ -757,7 +757,7 @@ function MediaGrid({ posts, type, onOpen }: { posts: Post[]; type: 'image' | 'vi
 
 function UploadPanel({ cat, uploading, onUpload }: { cat: BrandKitCat; uploading: boolean; onUpload: () => void }) {
   const label = cat === 'logos' ? 'logos' : cat === 'guidelines' ? 'guideline docs' : 'briefs'
-  const helper = cat === 'logos' ? 'PNG, SVG, and JPG brand marks.' : 'PDF, DOCX, TXT, MD, and image files that Vera can read or reference.'
+  const helper = cat === 'logos' ? 'PNG, SVG, and JPG brand marks.' : 'PDF, DOCX, TXT, MD, and image files that Sona can read or reference.'
   return (
     <button
       type="button"

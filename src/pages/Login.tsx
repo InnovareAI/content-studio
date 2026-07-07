@@ -1,4 +1,4 @@
-// VERA login — mirrors SAM's handler: Google + Microsoft SSO (Supabase
+// SONA login — mirrors SAM's handler: Google + Microsoft SSO (Supabase
 // signInWithOAuth) + a magic-link email fallback (SMTP). Built to match SAM
 // so the upcoming unified "InnovareAI Agentic System" login is a config merge,
 // not a rewrite — same providers, same flow.
@@ -115,7 +115,7 @@ export default function Login() {
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
           <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>V</span>
-          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>VERA</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>SONA</span>
         </div>
 
         <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-pop)', padding: 28 }}>
@@ -132,7 +132,7 @@ export default function Login() {
             </div>
           ) : (
             <>
-              <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink)', margin: '0 0 4px' }}>Sign in to VERA</h2>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink)', margin: '0 0 4px' }}>Sign in to SONA</h2>
               <p style={{ fontSize: 13.5, color: 'var(--ghost)', margin: '0 0 22px' }}>Content strategy, production, and publishing.</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -243,7 +243,7 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--faint)', marginTop: 18 }}>
-          One sign-in for VERA and InnovareAI apps.
+          One sign-in for SONA and InnovareAI apps.
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
 //
 // Claude.ai-style projects: bounded scopes within a workspace. Each
 // project has its own custom instructions, knowledge base, brand voice,
-// and artifacts. VERA's chat scope follows the active project.
+// and artifacts. SONA's chat scope follows the active project.
 //
 // Backed by the `projects` table (migration 026). Every org gets a
 // default project on backfill (`[Org name] brand`); the operator can

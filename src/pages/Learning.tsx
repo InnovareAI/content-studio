@@ -418,7 +418,7 @@ export default function Learning() {
       <PageHeader
         eyebrow={activeProject?.name ?? 'Space'}
         title="Learning Loop"
-        subtitle="What VERA has learned from approvals, publishing, engagement, shares, clicks, and traffic signals."
+        subtitle="What SONA has learned from approvals, publishing, engagement, shares, clicks, and traffic signals."
         actions={
           <Button variant="secondary" size="sm" onClick={load} disabled={loading}>
             <RefreshCw size={14} />
@@ -457,7 +457,7 @@ export default function Learning() {
         <Panel>
           <SectionLabel>Growth outcomes</SectionLabel>
           <p style={{ margin: `${space[4]} 0 ${space[3]}`, color: color.ink2, fontSize: t.size.sm, lineHeight: 1.5 }}>
-            Vera optimizes for audience signals, not raw output volume. The first wave is comments, shares, qualified traffic, questions, inquiries, and follow-up triggers.
+            Sona optimizes for audience signals, not raw output volume. The first wave is comments, shares, qualified traffic, questions, inquiries, and follow-up triggers.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
             {DEMAND_GROWTH_OUTCOMES.map(item => (
@@ -472,12 +472,12 @@ export default function Learning() {
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: space[5], alignItems: 'start', marginBottom: space[8] }}>
         <Panel>
-          <SectionLabel>What VERA learned</SectionLabel>
+          <SectionLabel>What SONA learned</SectionLabel>
           <div style={{ display: 'grid', gap: space[3], marginTop: space[4] }}>
             {loading ? (
               <LearningState>Reading the latest content and metric signals...</LearningState>
             ) : insights.length ? insights.map(item => <InsightCard key={item.title} insight={item} />) : (
-              <LearningState>Publish and sync metrics to start the learning loop. VERA needs content outcomes before it can recommend stronger patterns.</LearningState>
+              <LearningState>Publish and sync metrics to start the learning loop. SONA needs content outcomes before it can recommend stronger patterns.</LearningState>
             )}
           </div>
         </Panel>
@@ -490,14 +490,14 @@ export default function Learning() {
             <SignalRow label="Clicks" value={summary.clicks} body="Traffic from content should trigger follow-up angles, not just reporting." />
             <SignalRow label="Qualified traffic" value={summary.qualifiedTraffic} body="Useful visits are stronger than raw reach because they show movement toward owned conversion paths." />
             <SignalRow label="Audience questions" value={summary.buyerQuestions} body="Useful questions should become content angles and follow-up tasks." />
-            <SignalRow label="Inquiries" value={summary.meetingRequests} body="Inquiries are strong signals that VERA should brief the next workflow and repeat the source pattern." />
+            <SignalRow label="Inquiries" value={summary.meetingRequests} body="Inquiries are strong signals that SONA should brief the next workflow and repeat the source pattern." />
             <SignalRow label="Reach" value={summary.views} body="Views and reach are useful only when they lead to engagement, qualified visits, or sharper market learning." />
           </div>
           <div style={{ display: 'grid', gap: space[2], marginTop: space[4] }}>
             {operatingRows.length ? operatingRows.map(row => (
               <OperatingRow key={row.label} label={row.label} value={row.value} />
             )) : (
-              <LearningState>Add a strategy model in the Strategy Brain so VERA knows what traction, approval, and follow-up mean for this space.</LearningState>
+              <LearningState>Add a strategy model in the Strategy Brain so SONA knows what traction, approval, and follow-up mean for this space.</LearningState>
             )}
           </div>
         </Panel>
@@ -507,7 +507,7 @@ export default function Learning() {
         <Panel>
           <SectionLabel action={`${measuredChannels}/${channelRows.length} measured`}>Channel learning coverage</SectionLabel>
           <p style={{ margin: `${space[4]} 0`, color: color.ink2, fontSize: t.size.sm, lineHeight: 1.5 }}>
-            Each space can use all channels, but Vera should only scale the channels where source context, approval rules, and performance evidence exist.
+            Each space can use all channels, but Sona should only scale the channels where source context, approval rules, and performance evidence exist.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))', gap: space[3] }}>
             {channelRows.map(row => <ChannelLearningCard key={row.key} row={row} />)}
@@ -540,7 +540,7 @@ export default function Learning() {
               ))}
             </div>
           ) : (
-            <LearningState>No active follow-ups yet. Queue a detected signal when VERA sees comments, shares, clicks, traffic, questions, or inquiries worth action.</LearningState>
+            <LearningState>No active follow-ups yet. Queue a detected signal when SONA sees comments, shares, clicks, traffic, questions, or inquiries worth action.</LearningState>
           )}
 
           {untrackedHandoffCandidates.length > 0 && (
@@ -624,7 +624,7 @@ export default function Learning() {
             </button>
           </div>
           <p style={{ margin: `0 0 ${space[4]}`, color: color.ink2, fontSize: t.size.sm, lineHeight: 1.5 }}>
-            These are inactive space skills generated from measured evidence. Save them as proposals, inspect the recipe, then enable the ones VERA should use.
+            These are inactive space skills generated from measured evidence. Save them as proposals, inspect the recipe, then enable the ones SONA should use.
           </p>
           {skillMessage && (
             <div style={{ marginBottom: space[4], padding: space[3], border: `1px solid ${skillMessage.tone === 'success' ? color.success : color.danger}`, borderRadius: radius.md, color: skillMessage.tone === 'success' ? color.success : color.danger, background: color.paper2, fontSize: t.size.cap }}>
@@ -643,7 +643,7 @@ export default function Learning() {
               ))}
             </div>
           ) : (
-            <LearningState>Learning skills appear once VERA has measured content assets. Add manual metrics or sync provider metrics to produce evidence-backed proposals.</LearningState>
+            <LearningState>Learning skills appear once SONA has measured content assets. Add manual metrics or sync provider metrics to produce evidence-backed proposals.</LearningState>
           )}
         </Panel>
       </section>
@@ -866,7 +866,7 @@ function ExperimentCard({ experiment, onBrief }: { experiment: Experiment; onBri
         <span style={{ display: 'block', color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold }}>{experiment.title}</span>
         <span style={{ display: 'block', color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5, marginTop: 2 }}>{experiment.body}</span>
       </span>
-      <button onClick={onBrief} title="Brief this experiment in Vera" style={{ flexShrink: 0, alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: radius.pill, border: `1px solid ${color.line}`, background: color.surface, color: color.ink, fontSize: t.size.micro, fontWeight: t.weight.medium, cursor: 'pointer' }}>
+      <button onClick={onBrief} title="Brief this experiment in Sona" style={{ flexShrink: 0, alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: radius.pill, border: `1px solid ${color.line}`, background: color.surface, color: color.ink, fontSize: t.size.micro, fontWeight: t.weight.medium, cursor: 'pointer' }}>
         <Send size={12} />
         Brief
       </button>
@@ -1004,7 +1004,7 @@ function buildSamHandoffText(action: SamHandoffAction) {
   const existingPrompt = handoffPromptFromPayload(action)
   if (existingPrompt) return existingPrompt
   return [
-    'Create a follow-up brief for this VERA content signal.',
+    'Create a follow-up brief for this SONA content signal.',
     '',
     `Asset: ${action.title}`,
     `Channel: ${action.channel || 'Unassigned'}`,
@@ -1017,7 +1017,7 @@ function buildSamHandoffText(action: SamHandoffAction) {
     '2. likely audience pain or intent',
     '3. people, accounts, or segments that need follow-up',
     '4. outreach angle and objection to prepare for',
-    '5. next VERA content experiment',
+    '5. next SONA content experiment',
   ].join('\n')
 }
 
@@ -1113,7 +1113,7 @@ function buildHandoffCandidates(posts: Post[], metrics: Map<string, LearningMetr
       const title = post.title || post.copy?.slice(0, 84) || 'Untitled content'
       const channel = post.channel || metric.provider || 'Unassigned'
       const prompt = [
-        `Create a follow-up brief for this VERA content signal.`,
+        `Create a follow-up brief for this SONA content signal.`,
         ``,
         `Space: ${context.companyName || 'current space'}`,
         `Asset: ${title}`,
@@ -1132,7 +1132,7 @@ function buildHandoffCandidates(posts: Post[], metrics: Map<string, LearningMetr
         `2. likely audience pain or intent`,
         `3. people, accounts, or segments that need follow-up`,
         `4. outreach angle and objection to prepare for`,
-        `5. next VERA content experiment`,
+        `5. next SONA content experiment`,
       ].filter(Boolean).join('\n')
       return { id: post.id, title, channel, score, triggers, prompt }
     })
@@ -1350,14 +1350,14 @@ function buildExperiments(
       body: `Turn ${base} into three audience-specific versions. Compare comments, shares, questions, and inquiries by audience.`,
       tone: color.accent,
       prompt: [
-        `Plan the next VERA content experiment: three audience-specific variations.`,
+        `Plan the next SONA content experiment: three audience-specific variations.`,
         ``,
         commonContext,
         ``,
         `Source asset or proof point: ${base}`,
         `Primary channel to test: ${nextChannel}`,
         ``,
-        `Return the experiment brief, the three variants, the approval route for each, and the exact metric Vera should compare after publishing.`,
+        `Return the experiment brief, the three variants, the approval route for each, and the exact metric Sona should compare after publishing.`,
       ].join('\n'),
     },
     {
@@ -1380,14 +1380,14 @@ function buildExperiments(
       body: 'Convert the highest-engagement topic into a follow-up angle with objections and useful triggers included.',
       tone: color.info,
       prompt: [
-        `Create a follow-up experiment from VERA performance learning.`,
+        `Create a follow-up experiment from SONA performance learning.`,
         ``,
         commonContext,
         ``,
         `Strongest current signal: ${base}`,
         `Channel context: ${nextChannel}`,
         ``,
-        `Return a follow-up brief, likely triggers, objections to prepare for, questions to answer, and the next content asset Vera should create to create more of this signal.`,
+        `Return a follow-up brief, likely triggers, objections to prepare for, questions to answer, and the next content asset Sona should create to create more of this signal.`,
       ].join('\n'),
     },
   ]
@@ -1417,7 +1417,7 @@ function buildSkillProposals(
       key: 'repeat-strongest-pattern',
       name: `Learning proposal: repeat ${platform} content pattern`,
       description: `Use measured evidence from ${company} to repeat the strongest content pattern without copying the same post.`,
-      triggerDescription: `Use when drafting or reviewing ${platform} content after VERA identifies a top-performing asset.`,
+      triggerDescription: `Use when drafting or reviewing ${platform} content after SONA identifies a top-performing asset.`,
       triggerWhen: {
         source: 'learning-loop',
         platform,
@@ -1470,7 +1470,7 @@ function buildSkillProposals(
         metric_signal: ['buyer_questions', 'meeting_requests', 'comments'],
       },
       promptModule: [
-        `Purpose: convert intent from content into the next VERA actions and follow-up workflow.`,
+        `Purpose: convert intent from content into the next SONA actions and follow-up workflow.`,
         ``,
         `Evidence: ${totals.buyerQuestions} audience question${totals.buyerQuestions === 1 ? '' : 's'} and ${totals.meetingRequests} inquir${totals.meetingRequests === 1 ? 'y' : 'ies'} are visible in the current learning window.`,
         ``,

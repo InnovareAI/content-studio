@@ -177,11 +177,11 @@ export default function ReviewDetail() {
     return () => { cancelled = true }
   }, [linkedInCheckChannel, linkedInCheckPostId, linkedInCheckProjectId])
 
-  // Refine with VERA — the reviewer's feedback goes straight to VERA, who
+  // Refine with SONA — the reviewer's feedback goes straight to SONA, who
   // edits the copy / image / video on THIS post in place (refine_post tool).
   async function refineWithVera() {
     if (!post || !refineText.trim() || refining) return
-    setRefining(true); setError(null); setRefineStatus('VERA is revising…')
+    setRefining(true); setError(null); setRefineStatus('SONA is revising…')
     const SUPA = import.meta.env.VITE_SUPABASE_URL as string
     const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string
     const p = post as unknown as { org_id: string; project_id: string | null }
@@ -493,13 +493,13 @@ export default function ReviewDetail() {
         <ApprovalRouteSection route={approvalRoute} />
       </div>
 
-      {/* Refine with VERA — feedback → in-place revision of copy/image/video */}
+      {/* Refine with SONA — feedback → in-place revision of copy/image/video */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mt-4">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-          <p className="text-xs font-semibold text-gray-900">Refine with VERA</p>
+          <p className="text-xs font-semibold text-gray-900">Refine with SONA</p>
         </div>
-        <p className="text-[11px] text-gray-400 mb-3">Tell VERA what to improve — she edits the copy, image, or video on this post in place.</p>
+        <p className="text-[11px] text-gray-400 mb-3">Tell SONA what to improve — she edits the copy, image, or video on this post in place.</p>
         <textarea
           value={refineText}
           onChange={e => setRefineText(e.target.value)}

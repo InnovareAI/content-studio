@@ -1,4 +1,4 @@
-// VERA ambient chat — the always-on partner with workspace awareness.
+// SONA ambient chat — the always-on partner with workspace awareness.
 //
 // Separate from vera-orchestrator (the 9-agent brief→draft pipeline). This
 // one is conversational, sub-second TTFB, knows the workspace it's in,
@@ -214,7 +214,7 @@ Marketing and content strategy expertise:
 - You are a senior marketing strategist, content strategist, creative director,
   editor, copy chief, campaign planner, and production lead in one assistant.
   Treat every request as a business communication problem, not a writing task.
-- VERA's job is to turn the active space's Brain assumptions into measurable
+- SONA's job is to turn the active space's Brain assumptions into measurable
   content and marketing work. Do not behave like a generic social post
   generator. The Brain decides whether the brand is B2B, B2C, local,
   creator-led, commerce, recruiting, community, or mixed. Create content that
@@ -362,7 +362,7 @@ Specialist advisor model:
 `.trim()
 
 const VERA_CONSTITUTION_RUNTIME = `
-Vera constitution:
+Sona constitution:
 - Business outcome first: audience, objective, offer, proof, channel, CTA, and
   next step matter more than surface polish.
 - Be source-grounded. Use Strategy Brain, active project context, named sources,
@@ -463,7 +463,7 @@ async function uploadImageToStorage(
 }
 
 const BASE_PERSONA = `
-You are VERA — InnovareAI's creative AI partner. The always-on chat dock at
+You are SONA — InnovareAI's creative AI partner. The always-on chat dock at
 the bottom of every page. You're not a brief workshop — that's the
 /generate route. You're here for everything else: thinking through what
 to write, summarising what's in flight, sharpening copy, answering
@@ -629,8 +629,8 @@ InnovareAI products (this workspace's own context):
   scope (you draft the LinkedIn post, the landing page copy, the
   positioning). Outbound prospecting messages FOR SAM's customers are
   not — that's SAM's domain. Don't conflate the two.
-- VERA — this tool. The content-side AI partner. Same scope rule:
-  drafting marketing content about VERA is yours; replacing VERA in
+- SONA — this tool. The content-side AI partner. Same scope rule:
+  drafting marketing content about SONA is yours; replacing SONA in
   somebody's pipeline is not.
 - When asked to draft anything about InnovareAI's products, default
   to web_search on innovareai.com (and product subpaths like /sam)
@@ -729,7 +729,7 @@ Generation tools:
   FIRST, then call generate_carousel with ONE entry per frame. HARD RULE: a
   carousel ask gets EVERY frame generated — NEVER answer it with a single
   generate_image. If they describe five frames, you produce five.
-- generate_video — generates a real video clip (MP4) via Vera's cost-controlled
+- generate_video — generates a real video clip (MP4) via Sona's cost-controlled
   video router. Use the workspace default unless the operator explicitly asks
   for a different approved model. Premium video models like Kling, Sora, Veo, Seedance, and
   "hero" aliases are not defaults. If the ask is a video POST and no draft
@@ -767,7 +767,7 @@ Knowledge tools:
   the top 5 KB hits for the current turn; kb_search is for going
   deeper or wider.
 - kb_ingest — when the operator pastes an article, transcript, note,
-  or excerpt and wants VERA to remember it. Store verbatim — don't
+  or excerpt and wants SONA to remember it. Store verbatim — don't
   paraphrase the source.
 - kb_synthesize — when several raw items address the same theme,
   merge them into a canonical wiki article. The article becomes part
@@ -871,7 +871,7 @@ interface WorkspaceContext {
     linkedin_connected_at: string | null
   }
   // Phase 2b — active project scope + its top-N relevant knowledge items.
-  // When project_id is supplied, this defines VERA's scope for the turn.
+  // When project_id is supplied, this defines SONA's scope for the turn.
   // Absent / null = workspace-level chat (default brand context only).
   activeProject?: {
     id: string
@@ -888,10 +888,10 @@ interface WorkspaceContext {
     source_kind: string
     match_kind?: 'semantic' | 'keyword' | 'recent'
   }>
-  // Phase 3 — agent observations. VERA's notice log: things she
+  // Phase 3 — agent observations. SONA's notice log: things she
   // spotted (stale audit, empty queue, knowledge gap, etc.) that may
   // warrant a proactive prompt to the operator. When non-empty, the
-  // persona instructs VERA to lead the conversation with these.
+  // persona instructs SONA to lead the conversation with these.
   observations: Array<{
     id: string
     kind: string
@@ -988,7 +988,7 @@ async function loadContext(
     : Promise.resolve({ data: [], error: null })
 
   // Pending-review count for the active scope. Project-scoped when a client
-  // workspace is open, so VERA's "what's pending?" matches the Review queue
+  // workspace is open, so SONA's "what's pending?" matches the Review queue
   // (otherwise it counts every client's posts org-wide — the cross-client leak).
   let pendingQuery = supabase.from('content_posts')
     .select('id', { count: 'exact', head: true })
@@ -1022,7 +1022,7 @@ async function loadContext(
       .eq('is_pinned', true)
       .order('created_at', { ascending: false })
       .limit(40),
-    // Skills: global Vera, workspace, and the active project's space skills.
+    // Skills: global Sona, workspace, and the active project's space skills.
     skillsQuery,
     // Skill performance — approval rate per skill (joined via the
     // skill_performance view). Only skills with at least 1 invocation
@@ -1290,7 +1290,7 @@ function projectKnowledgeExcerpt(text: string, terms: string[]) {
 }
 
 // Quick KB stats (count of raw, count of articles, 5 most-recent titles).
-// Surfaced in the workspace context so VERA knows the KB exists + has scale.
+// Surfaced in the workspace context so SONA knows the KB exists + has scale.
 async function loadKbStats(
   supabase: AdminClient,
   orgId: string,
@@ -1308,7 +1308,7 @@ async function loadKbStats(
 }
 
 // Semantic retrieval of the top-K relevant KB snippets for the current
-// user turn. Auto-injected into the workspace context block so VERA reads
+// user turn. Auto-injected into the workspace context block so SONA reads
 // real source material before responding — without needing to explicitly
 // call kb_search.
 async function retrieveKbHits(
@@ -1510,7 +1510,7 @@ function renderContext(ctx: WorkspaceContext, route: string): string {
       lines.push(`  Recent wiki entries: ${ctx.kbStats.recent_titles.join(' · ')}`)
     }
   } else {
-    lines.push(`Knowledge base: empty. Use kb_ingest when operator pastes articles, notes, or transcripts they want VERA to remember.`)
+    lines.push(`Knowledge base: empty. Use kb_ingest when operator pastes articles, notes, or transcripts they want SONA to remember.`)
   }
 
   if (ctx.kbHits.length) {
@@ -1522,8 +1522,8 @@ function renderContext(ctx: WorkspaceContext, route: string): string {
     lines.push(`</relevant_kb_snippets>`)
   }
 
-  // ─── Active observations — VERA's notice log ─────────────────────
-  // Things VERA noticed since last action that may warrant an
+  // ─── Active observations — SONA's notice log ─────────────────────
+  // Things SONA noticed since last action that may warrant an
   // operator prompt. Persona tells her to mention these proactively
   // when chat opens, rather than waiting to be asked.
   if (ctx.observations && ctx.observations.length > 0) {
@@ -1540,7 +1540,7 @@ function renderContext(ctx: WorkspaceContext, route: string): string {
   return lines.join('\n')
 }
 
-// ─── Tools VERA can call ─────────────────────────────────────────────────────
+// ─── Tools SONA can call ─────────────────────────────────────────────────────
 // Schemas use Anthropic's tool_use shape. Descriptions are written for the
 // model — they directly shape when each tool fires.
 const TOOLS = [
@@ -1591,7 +1591,7 @@ const TOOLS = [
   },
   {
     name: 'generate_image',
-    description: 'Generate a single image through Vera\'s cost-aware image router. Default is the cheap/fast prototype tier (Seedream where available, Nano Banana fallback), not OpenAI. OpenAI Image Gen 2 is premium-only and must never be implied by ordinary hero/social image requests. The prompt argument must be a dense, specific image-gen prompt.',
+    description: 'Generate a single image through Sona\'s cost-aware image router. Default is the cheap/fast prototype tier (Seedream where available, Nano Banana fallback), not OpenAI. OpenAI Image Gen 2 is premium-only and must never be implied by ordinary hero/social image requests. The prompt argument must be a dense, specific image-gen prompt.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1765,7 +1765,7 @@ const TOOLS = [
         },
         description: { type: 'string', description: 'Trigger-oriented description. Write for the model: when should this skill be used?' },
         prompt_module: { type: 'string', description: 'The full instructional recipe. Include purpose, process, gotchas, and output format. 200-400 words typical, opinionated and specific.' },
-        trigger_description: { type: 'string', description: 'Plain-language trigger guidance for when Vera should use this skill.' },
+        trigger_description: { type: 'string', description: 'Plain-language trigger guidance for when Sona should use this skill.' },
         gotchas: { type: 'array', items: { type: 'string' }, description: 'Common failure modes this skill should avoid.' },
         good_examples: { type: 'array', items: { type: 'string' }, description: 'Good patterns or examples, one per item.' },
         bad_examples: { type: 'array', items: { type: 'string' }, description: 'Avoid patterns or bad examples, one per item.' },
@@ -1868,7 +1868,7 @@ const TOOLS = [
   },
   {
     name: 'generate_video',
-    description: 'Generate an actual video clip (MP4) via Vera\'s cost-controlled video router and stream it into the thread. Use only after the operator explicitly asks to render a real clip. The backend uses the space default model unless an approved override is provided. Do not choose Kling, Sora, Veo, Seedance, "hero", or raw fal slugs for ordinary requests because those are premium choices and are blocked by default. The finished clip renders in the thread and attaches to the active draft. IMPORTANT: this attaches to an EXISTING draft. If the operator wants a video POST and you have not saved a draft yet, call save_draft for the caption FIRST so the clip has a post card to attach to. For a written production brief instead of a real clip, use generate_video_brief.',
+    description: 'Generate an actual video clip (MP4) via Sona\'s cost-controlled video router and stream it into the thread. Use only after the operator explicitly asks to render a real clip. The backend uses the space default model unless an approved override is provided. Do not choose Kling, Sora, Veo, Seedance, "hero", or raw fal slugs for ordinary requests because those are premium choices and are blocked by default. The finished clip renders in the thread and attaches to the active draft. IMPORTANT: this attaches to an EXISTING draft. If the operator wants a video POST and you have not saved a draft yet, call save_draft for the caption FIRST so the clip has a post card to attach to. For a written production brief instead of a real clip, use generate_video_brief.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1931,7 +1931,7 @@ const TOOLS = [
   },
   {
     name: 'save_draft',
-    description: 'Save a post you (VERA) just wrote so it appears as a Draft card in the thread (Approve / Tweak / Regenerate) and lands in Review as Pending. THIS IS YOUR DEFAULT for a single post: write the copy yourself in the brand voice — grounded in <workspace_context> + knowledge — then call save_draft with it. Fast and reliable. Use this for "draft/write a post on X", "I want one post", "give me a LinkedIn post about Y". Do NOT narrate "drafting…" — write it and save it in the same turn.',
+    description: 'Save a post you (SONA) just wrote so it appears as a Draft card in the thread (Approve / Tweak / Regenerate) and lands in Review as Pending. THIS IS YOUR DEFAULT for a single post: write the copy yourself in the brand voice — grounded in <workspace_context> + knowledge — then call save_draft with it. Fast and reliable. Use this for "draft/write a post on X", "I want one post", "give me a LinkedIn post about Y". Do NOT narrate "drafting…" — write it and save it in the same turn.',
     input_schema: {
       type: 'object',
       properties: {
@@ -1986,7 +1986,7 @@ const TOOLS = [
         channels: { type: 'array', items: { type: 'string' }, description: 'Optional multi-channel distribution set. Use this for cross-channel campaigns. Supported: LinkedIn, YouTube, Medium, Quora, Reddit, X, Instagram, Facebook, Blog, Email.' },
         cadence: { type: 'string', description: 'How far apart to schedule: "weekly" (default), "biweekly", or "daily". One post per slot.' },
         start_date: { type: 'string', description: 'Optional ISO date (YYYY-MM-DD) for the first post. Default: the upcoming Monday.' },
-        campaign_name: { type: 'string', description: 'Optional short campaign name. If omitted, VERA names it from the brief.' },
+        campaign_name: { type: 'string', description: 'Optional short campaign name. If omitted, SONA names it from the brief.' },
         applied_skill_names: { type: 'array', items: { type: 'string' }, description: 'Exact names of Skills from workspace_context that shaped this campaign. Omit if none.' },
         applied_skill_ids: { type: 'array', items: { type: 'string' }, description: 'Optional exact skill ids from workspace_context for skills that shaped this campaign.' },
       },
@@ -2158,7 +2158,7 @@ async function recordPostEditOutcome(
   const { error } = await ctx.supabase.from('post_outcomes').insert({
     post_id: postId,
     outcome: 'edited',
-    feedback: detail.feedback ?? 'VERA refined this post from operator feedback.',
+    feedback: detail.feedback ?? 'SONA refined this post from operator feedback.',
     recorded_by: ctx.userId,
     edit_summary: editSummary,
   } as Database['public']['Tables']['post_outcomes']['Insert'])
@@ -2175,8 +2175,8 @@ async function executeTool(
 ): Promise<{ result: string; image_url?: string; video_url?: string }> {
   try {
     switch (name) {
-      // ─── save_draft — VERA wrote the post; persist it + surface the card ──
-      // The fast, reliable default. No external orchestrator: VERA composes
+      // ─── save_draft — SONA wrote the post; persist it + surface the card ──
+      // The fast, reliable default. No external orchestrator: SONA composes
       // the copy in-turn, we insert it as Pending Review and emit a `draft`
       // event so the thread renders the artifact immediately.
       case 'save_draft': {
@@ -2221,7 +2221,7 @@ async function executeTool(
         // row, and emit an `image` event so it fills into the card. Best-effort:
         // the copy is already saved, so an image failure never loses the draft.
         // TEXT-FIRST: only generate an image when the operator explicitly
-        // asked for one (Vera passes image_prompt then). Never auto-derive a
+        // asked for one (Sona passes image_prompt then). Never auto-derive a
         // visual — a post stays text-only unless a visual was requested.
         const imagePrompt = (input.image_prompt as string)?.trim() || ''
         let imageNote = ''
@@ -2288,7 +2288,7 @@ async function executeTool(
       }
 
       // ─── plan_campaign — the agentic "do the whole job" path ──────────────
-      // One ask ("plan the month") → a full content arc. VERA writes every
+      // One ask ("plan the month") → a full content arc. SONA writes every
       // post in a single structured call, dates each by cadence, persists them
       // all as Pending under a new campaign, and emits a `campaign` event so
       // the thread renders a review calendar. Images are deferred (generated on
@@ -2327,7 +2327,7 @@ async function executeTool(
           brandBrief = parts.join('\n')
         }
 
-        // The client's content categories (SocialBee-style buckets) — Vera tags
+        // The client's content categories (SocialBee-style buckets) — Sona tags
         // each post so Calendar/Artifacts can filter and the library stays organised.
         let categoryClause = ''
         if (ctx.projectId) {
@@ -2345,7 +2345,7 @@ async function executeTool(
             maxTokens: 6000,
             temperature: 0.2,
             json: true,
-            system: `You are VERA, InnovareAI's creative content partner. You write sharp, platform-native content for ${channelLabel} in the brand voice. American spelling. Never invent statistics or fake quotes.${brandBrief ? `\n\nBRAND VOICE:\n${brandBrief}` : ''}`,
+            system: `You are SONA, InnovareAI's creative content partner. You write sharp, platform-native content for ${channelLabel} in the brand voice. American spelling. Never invent statistics or fake quotes.${brandBrief ? `\n\nBRAND VOICE:\n${brandBrief}` : ''}`,
             user: `Plan a ${channelLabel} content campaign and write every post.
 
 Brief: ${brief}
@@ -2550,7 +2550,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
       }
 
       // ─── run_pipeline — drive the 9-agent orchestrator from the thread ──
-      // The single composer drives both chat and drafting: VERA calls this
+      // The single composer drives both chat and drafting: SONA calls this
       // when the operator briefs a post. We proxy the orchestrator's SSE,
       // surface each agent as a calm progress caption, then emit a `draft`
       // event with the saved post so the frontend renders a Draft card.
@@ -2586,7 +2586,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
 
         // Plain-language captions — the operator never sees the agent roster.
         const STEP: Record<string, string> = {
-          VERA: 'Getting started', Strategist: 'Planning the angle',
+          SONA: 'Getting started', Strategist: 'Planning the angle',
           Researcher: 'Gathering supporting facts', Writer: 'Writing the draft',
           'SEO Agent': 'Tuning for search', 'Persona Adapter': 'Tailoring to the audience',
           'Brand Guard': 'Checking brand voice', Compliance: 'Compliance review',
@@ -2878,7 +2878,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
           .order('created_at', { ascending: false })
           .limit(limit)
         // Scope to the active space so the queue matches the Review surface —
-        // without this, VERA lists every workspace's pending posts org-wide.
+        // without this, SONA lists every workspace's pending posts org-wide.
         if (ctx.projectId) q = q.eq('project_id', ctx.projectId)
         if (channel) q = q.eq('channel', channel)
         const { data, error } = await q
@@ -2905,7 +2905,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
         if (postId) q = q.eq('id', postId)
         else if (match) {
           q = q.ilike('title', `%${match}%`)
-          // A fuzzy title match must stay inside the active space, so VERA
+          // A fuzzy title match must stay inside the active space, so SONA
           // never opens another workspace's post on a coincidental title hit.
           if (ctx.projectId) q = q.eq('project_id', ctx.projectId)
         }
@@ -3813,7 +3813,7 @@ function buildVideoStoryboard(input: Record<string, unknown>): string {
   lines.push('## Render Prompt To Approve')
   lines.push(makeRenderPrompt(topic, platform, tone, aspect, beats.map(([label]) => label), keyPoints, sourceImageUrl))
   lines.push('')
-  lines.push('Next step: approve this storyboard to render a prototype clip, or ask Vera to revise the scenes first.')
+  lines.push('Next step: approve this storyboard to render a prototype clip, or ask Sona to revise the scenes first.')
   return lines.join('\n')
 }
 
@@ -4278,7 +4278,7 @@ async function runOpenRouterAgent(opts: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://vera.innovareai.com',
-        'X-Title': 'VERA',
+        'X-Title': 'SONA',
       },
       body: JSON.stringify({ model, messages: msgs, tools: oaTools, tool_choice: 'auto', max_tokens: MAX_TOKENS }),
       signal: AbortSignal.timeout(300_000),

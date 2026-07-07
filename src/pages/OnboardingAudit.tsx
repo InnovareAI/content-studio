@@ -298,7 +298,7 @@ export default function OnboardingAudit() {
             <div>
               <h2 className="text-base font-bold text-gray-900">Connect LinkedIn for this audit</h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                Unipile's hosted wizard handles the login. Once connected, VERA can read approved LinkedIn context
+                Unipile's hosted wizard handles the login. Once connected, SONA can read approved LinkedIn context
                 for this space. Skip this when LinkedIn is not needed for the first strategy pass.
               </p>
             </div>
@@ -419,7 +419,7 @@ export default function OnboardingAudit() {
             {appliedAt ? (
               <button onClick={() => { window.location.href = '/' }}
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold">
-                <Check className="w-4 h-4" /> Start creating in Vera
+                <Check className="w-4 h-4" /> Start creating in Sona
               </button>
             ) : (
               <button onClick={applyAudit} disabled={applying}
