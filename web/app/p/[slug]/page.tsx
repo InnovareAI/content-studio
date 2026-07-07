@@ -11,12 +11,11 @@ export default async function SpacePage({ params }: SpacePageProps) {
   const { space } = await getSpace(slug)
 
   return (
-    <main
+    <section
       style={{
         padding: '24px',
         color: 'var(--ink)',
-        background: 'var(--paper)',
-        minHeight: '100vh',
+        minHeight: '100%',
       }}
     >
       <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>
@@ -25,6 +24,6 @@ export default async function SpacePage({ params }: SpacePageProps) {
       <p style={{ margin: '8px 0 0', color: 'var(--ghost)' }}>
         /p/{space.slug}
       </p>
-    </main>
+    </section>
   )
 }
