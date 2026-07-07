@@ -1,6 +1,6 @@
 'use client'
 
-// Right rail content slot — pages opt into providing content for the
+// Right rail content slot - pages opt into providing content for the
 // right rail; Layout renders it when present, or widens the canvas when
 // it's null. Implementation: simple state in context, pages call
 // setRightRail(<Stuff/>) in a useEffect and clear it on unmount.
@@ -60,7 +60,7 @@ export function useRightRailWidth() {
  * The hook automatically clears the rail on unmount so content doesn't
  * leak across page navigations.
  *
- * Pass the dependency array carefully — anything used inside the rail
+ * Pass the dependency array carefully - anything used inside the rail
  * content that can change (e.g. an audit score, a count) should be a
  * dependency so the rail re-renders when it updates.
  *

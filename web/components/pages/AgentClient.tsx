@@ -1,0 +1,2329 @@
+'use client'
+
+// SONA - the one DOING surface (/p/:slug/vera). The Claude 3-pane:
+// rail (Layout) - conversation (center, here) - draft artifact (right rail).
+//
+// One composer drives both chat and drafting: vera-chat decides, and when
+// the operator briefs a post it calls run_pipeline -> the 9-agent pipeline
+// streams calm step captions -> the finished draft arrives as a `draft`
+// event and opens in the right-hand artifact panel with Approve / Tweak /
+// Regenerate. Images (generate_image) and videos (generate_video) attach
+// to the artifact. This matches SAM's chat+artifact model.
+
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ArrowUp, Square, Sparkles, Check, RefreshCw, Pencil, Send, PenLine, Megaphone, Lightbulb, ImagePlus, Clapperboard, Zap, CalendarDays, Paperclip, FileText, Link2, Copy, Pin, X, Target, KeyRound, Lock } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import type { Post } from '@/lib/supabase'
+import { useOrg } from '@/components/providers/OrgProvider'
+import { useProject } from '@/components/providers/ProjectProvider'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { useRightRail } from '@/lib/rightRailContext'
+import { useToast } from '@/design'
+import { color, space, type as t, radius } from '@/design'
+import { PlatformPostPreview } from '@/components/PlatformPostPreview'
+import Markdown from '@/components/Markdown'
+import { downloadMarkdown } from '@/lib/exportDoc'
+import { markdownToText } from '@/lib/mdToText'
+import { hasBusinessContext, parseProjectInstructions } from '@/lib/businessContext'
+import {
+  buildModelRecommendations,
+  imageModelProvider,
+  type ModelPricingGuide,
+  type SpendEstimate,
+} from '@/lib/modelEconomics'
+import { useModelPricingCatalog, type ModelPricingCatalogSource } from '@/lib/useModelPricingCatalog'
+
+const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+const HISTORY_LIMIT = 40
+const MAX_ATTACHMENTS = 6
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+const MAX_TEXT_DOCUMENT_CHARS = 120_000
+const ACCEPTED_ATTACHMENT_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'text/csv',
+  'text/html',
+  'text/xml',
+  'application/json',
+  'application/xml',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.csv',
+  '.json',
+  '.pdf',
+  '.html',
+  '.htm',
+  '.xml',
+  '.yaml',
+  '.yml',
+].join(',')
+
+type ImageAttachment = { kind: 'image'; dataUrl: string; name: string; mime: string; size: number }
+type DocumentBlock = {
+  type: 'document'
+  source:
+    | { type: 'base64'; media_type: 'application/pdf'; data: string }
+    | { type: 'text'; media_type: 'text/plain'; data: string }
+  title: string
+  context?: string
+}
+
+
+type CommandStats = {
+  draft: number
+  pending: number
+  approved: number
+  scheduled: number
+  posted: number
+  rejected: number
+  campaigns: number
+}
+type DocumentAttachment = { kind: 'document'; document: DocumentBlock; name: string; mime: string; size: number; truncated?: boolean }
+type ComposerAttachment = ImageAttachment | DocumentAttachment
+type MessageFile = { name: string; mime: string; size: number }
+type ProviderCapabilities = {
+  loaded: boolean
+  isMaster: boolean
+  hasAnthropic: boolean
+  hasOpenRouter: boolean
+  hasOpenAI: boolean
+  hasFal: boolean
+  imagesEnabled: boolean
+  standardVideoEnabled: boolean
+  premiumMediaEnabled: boolean
+  platformMediaKeysEnabled: boolean
+  hasPlatformImageEntitlement: boolean
+  hasPlatformVideoEntitlement: boolean
+  textReady: boolean
+  imageReady: boolean
+  videoReady: boolean
+  needsTextKey: boolean
+  defaultTextModel: string | null
+  defaultImageModel: string
+  defaultVideoModel: string
+  defaultImageVideoModel: string
+  budgetGuardEnabled: boolean
+  budgetGuardMode: 'warn' | 'enforce'
+  monthlyBudgetUsd: number | null
+}
+type StoredAttachment =
+  | { kind: 'image'; url: string }
+  | { kind: 'video'; url: string }
+  | { kind: 'file'; name: string; mime: string; size: number }
+  | { kind: 'document'; name: string; mime: string; size: number }
+type WireContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+  | DocumentBlock
+
+const DEFAULT_CLIENT_AI_POLICY = {
+  imagesEnabled: true,
+  standardVideoEnabled: false,
+  premiumMediaEnabled: false,
+  platformMediaKeysEnabled: false,
+  defaultTextModel: null as string | null,
+  defaultImageModel: 'nano-banana',
+  defaultVideoModel: 'hailuo',
+  defaultImageVideoModel: 'hailuo-i2v',
+  budgetGuardEnabled: true,
+  budgetGuardMode: 'warn' as const,
+  monthlyBudgetUsd: null as number | null,
+}
+
+const DEFAULT_PROVIDER_CAPABILITIES: ProviderCapabilities = {
+  loaded: false,
+  isMaster: false,
+  hasAnthropic: false,
+  hasOpenRouter: false,
+  hasOpenAI: false,
+  hasFal: false,
+  imagesEnabled: DEFAULT_CLIENT_AI_POLICY.imagesEnabled,
+  standardVideoEnabled: DEFAULT_CLIENT_AI_POLICY.standardVideoEnabled,
+  premiumMediaEnabled: DEFAULT_CLIENT_AI_POLICY.premiumMediaEnabled,
+  platformMediaKeysEnabled: DEFAULT_CLIENT_AI_POLICY.platformMediaKeysEnabled,
+  hasPlatformImageEntitlement: false,
+  hasPlatformVideoEntitlement: false,
+  textReady: false,
+  imageReady: false,
+  videoReady: false,
+  needsTextKey: false,
+  defaultTextModel: DEFAULT_CLIENT_AI_POLICY.defaultTextModel,
+  defaultImageModel: DEFAULT_CLIENT_AI_POLICY.defaultImageModel,
+  defaultVideoModel: DEFAULT_CLIENT_AI_POLICY.defaultVideoModel,
+  defaultImageVideoModel: DEFAULT_CLIENT_AI_POLICY.defaultImageVideoModel,
+  budgetGuardEnabled: DEFAULT_CLIENT_AI_POLICY.budgetGuardEnabled,
+  budgetGuardMode: DEFAULT_CLIENT_AI_POLICY.budgetGuardMode,
+  monthlyBudgetUsd: DEFAULT_CLIENT_AI_POLICY.monthlyBudgetUsd,
+}
+const EMPTY_COMMAND_STATS: CommandStats = {
+  draft: 0,
+  pending: 0,
+  approved: 0,
+  scheduled: 0,
+  posted: 0,
+  rejected: 0,
+  campaigns: 0,
+}
+const PLATFORM_MEDIA_KEYS_ENABLED = process.env.NEXT_PUBLIC_PLATFORM_MEDIA_KEYS_ENABLED === 'true'
+
+function parseClientAiPolicy(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return DEFAULT_CLIENT_AI_POLICY
+  }
+  const policy = value as Record<string, unknown>
+  return {
+    imagesEnabled: typeof policy.images_enabled === 'boolean' ? policy.images_enabled : true,
+    standardVideoEnabled: typeof policy.standard_video_enabled === 'boolean' ? policy.standard_video_enabled : false,
+    premiumMediaEnabled: typeof policy.premium_media_enabled === 'boolean' ? policy.premium_media_enabled : false,
+    platformMediaKeysEnabled: typeof policy.platform_media_keys_enabled === 'boolean' ? policy.platform_media_keys_enabled : DEFAULT_CLIENT_AI_POLICY.platformMediaKeysEnabled,
+    defaultTextModel: typeof policy.default_text_model === 'string' && policy.default_text_model.trim() ? policy.default_text_model.trim() : null,
+    defaultImageModel: typeof policy.default_image_model === 'string' && policy.default_image_model.trim() ? policy.default_image_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultImageModel,
+    defaultVideoModel: typeof policy.default_video_model === 'string' && policy.default_video_model.trim() ? policy.default_video_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultVideoModel,
+    defaultImageVideoModel: typeof policy.default_image_video_model === 'string' && policy.default_image_video_model.trim() ? policy.default_image_video_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultImageVideoModel,
+    budgetGuardEnabled: typeof policy.budget_guard_enabled === 'boolean' ? policy.budget_guard_enabled : DEFAULT_CLIENT_AI_POLICY.budgetGuardEnabled,
+    budgetGuardMode: policy.budget_guard_mode === 'enforce' ? 'enforce' as const : DEFAULT_CLIENT_AI_POLICY.budgetGuardMode,
+    monthlyBudgetUsd: typeof policy.monthly_budget_usd === 'number' && Number.isFinite(policy.monthly_budget_usd) ? policy.monthly_budget_usd : null,
+  }
+}
+
+function extension(name: string) {
+  const dot = name.lastIndexOf('.')
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
+}
+
+function attachmentMime(file: File) {
+  const mime = file.type || ''
+  if (mime) return mime
+  const ext = extension(file.name)
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'
+  if (ext === 'png') return 'image/png'
+  if (ext === 'gif') return 'image/gif'
+  if (ext === 'webp') return 'image/webp'
+  if (ext === 'pdf') return 'application/pdf'
+  if (ext === 'json') return 'application/json'
+  if (ext === 'csv') return 'text/csv'
+  if (ext === 'md' || ext === 'markdown') return 'text/markdown'
+  if (ext === 'html' || ext === 'htm') return 'text/html'
+  if (ext === 'xml') return 'text/xml'
+  if (ext === 'yaml' || ext === 'yml') return 'text/yaml'
+  if (ext === 'txt') return 'text/plain'
+  return 'application/octet-stream'
+}
+
+function isSupportedImage(mime: string) {
+  return mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/gif' || mime === 'image/webp'
+}
+
+function isTextDocument(file: File, mime: string) {
+  if (mime.startsWith('text/')) return true
+  if (mime === 'application/json' || mime === 'application/xml' || mime === 'application/x-yaml' || mime === 'application/yaml') return true
+  return ['txt', 'md', 'markdown', 'csv', 'json', 'html', 'htm', 'xml', 'yaml', 'yml'].includes(extension(file.name))
+}
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+function readAsText(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsText(file)
+  })
+}
+
+function bytesHuman(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function hexToken(byteLength = 24) {
+  const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
+type ApprovalWebhookError = Error & { status?: number }
+
+function attachmentPrompt(attachments: ComposerAttachment[]) {
+  const images = attachments.filter(a => a.kind === 'image').length
+  const documents = attachments.filter(a => a.kind === 'document').length
+  if (images && documents) return `Use the attached ${documents} document${documents === 1 ? '' : 's'} and ${images} image${images === 1 ? '' : 's'}.`
+  if (documents) return `Use the attached ${documents} document${documents === 1 ? '' : 's'}.`
+  return `Use the attached ${images} image${images === 1 ? '' : 's'}.`
+}
+
+interface ToolEvent { id?: string; tool: string; status: 'running' | 'done'; message?: string }
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  pending?: boolean
+  tools?: ToolEvent[]
+  images?: string[]
+  files?: MessageFile[]
+  videos?: string[]
+  videoPending?: boolean   // a fal video job is rendering in the background
+  carouselPending?: { done: number; total: number }  // carousel frames rendering
+}
+
+function chatHistoryKey(projectId: string, sessionId: string) {
+  return `vera-chat-history:${projectId}:${sessionId}`
+}
+
+function chatSessionMetaKey(projectId: string, sessionId: string) {
+  return `vera-chat-session:${projectId}:${sessionId}`
+}
+
+function titleFromMessages(messages: Message[]) {
+  const firstUser = messages.find(message => message.role === 'user' && message.content.trim())
+  const firstAny = messages.find(message => message.content.trim())
+  return (firstUser?.content || firstAny?.content || 'Untitled chat').replace(/\s+/g, ' ').trim()
+}
+
+function stripOpenDraftContext(content: string) {
+  return content.split('\n\n---\n[The draft currently open')[0].trim()
+}
+
+function saveLocalChatMessages(projectId: string, sessionId: string, messages: Message[]) {
+  const keep = persistableMessages(messages)
+  localStorage.setItem(chatHistoryKey(projectId, sessionId), JSON.stringify(keep))
+  if (keep.length > 0) {
+    localStorage.setItem(chatSessionMetaKey(projectId, sessionId), JSON.stringify({
+      session_id: sessionId,
+      title: titleFromMessages(keep),
+      last_at: new Date().toISOString(),
+      message_count: keep.length,
+    }))
+  }
+}
+
+function parseStoredMessages(raw: string | null): Message[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as Message[]
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.id === 'string')
+      .map(m => ({
+        id: m.id,
+        role: m.role,
+        content: typeof m.content === 'string' ? stripOpenDraftContext(m.content) : '',
+        images: Array.isArray(m.images) ? m.images.filter(Boolean) : undefined,
+        videos: Array.isArray(m.videos) ? m.videos.filter(Boolean) : undefined,
+        files: Array.isArray(m.files) ? m.files.filter(f => f?.name) : undefined,
+      }))
+  } catch {
+    return []
+  }
+}
+
+function messageFingerprint(message: Message) {
+  return JSON.stringify({
+    role: message.role,
+    content: message.content,
+    images: message.images ?? [],
+    videos: message.videos ?? [],
+    files: message.files ?? [],
+  })
+}
+
+function mergeMessages(primary: Message[], fallback: Message[]) {
+  const seenIds = new Set<string>()
+  const seenFingerprints = new Set<string>()
+  const merged: Message[] = []
+  for (const message of [...primary, ...fallback]) {
+    if (seenIds.has(message.id)) continue
+    const fingerprint = messageFingerprint(message)
+    if (seenFingerprints.has(fingerprint)) continue
+    seenIds.add(message.id)
+    seenFingerprints.add(fingerprint)
+    merged.push(message)
+  }
+  return merged
+}
+
+function splitStoredAttachments(attachments: StoredAttachment[] | null | undefined) {
+  const atts = Array.isArray(attachments) ? attachments : []
+  const images = atts.filter((a): a is { kind: 'image'; url: string } => a.kind === 'image' && !!a.url).map(a => a.url)
+  const videos = atts.filter((a): a is { kind: 'video'; url: string } => a.kind === 'video' && !!a.url).map(a => a.url)
+  const files = atts
+    .filter((a): a is { kind: 'file' | 'document'; name: string; mime: string; size: number } => (
+      (a.kind === 'file' || a.kind === 'document') && !!a.name
+    ))
+    .map(a => ({ name: a.name, mime: a.mime ?? 'application/octet-stream', size: Number(a.size ?? 0) }))
+  return { images, videos, files }
+}
+
+function rowToMessage(row: { id: string; role: 'user' | 'assistant'; content: string | null; attachments?: StoredAttachment[] | null }): Message {
+  const { images, videos, files } = splitStoredAttachments(row.attachments)
+  return {
+    id: row.id,
+    role: row.role,
+    content: stripOpenDraftContext(row.content ?? ''),
+    images: images.length ? images : undefined,
+    videos: videos.length ? videos : undefined,
+    files: files.length ? files : undefined,
+  }
+}
+
+function serializeMessageAttachments(message: Message): StoredAttachment[] {
+  return [
+    ...(message.images ?? []).filter(Boolean).map(url => ({ kind: 'image' as const, url })),
+    ...(message.videos ?? []).filter(Boolean).map(url => ({ kind: 'video' as const, url })),
+    ...(message.files ?? []).filter(file => file?.name).map(file => ({
+      kind: 'file' as const,
+      name: file.name,
+      mime: file.mime || 'application/octet-stream',
+      size: Number(file.size ?? 0),
+    })),
+  ]
+}
+
+function persistableMessages(messages: Message[]) {
+  return messages
+    .filter(message => !message.pending)
+    .filter(message => message.content.trim() || serializeMessageAttachments(message).length > 0)
+    .slice(-HISTORY_LIMIT)
+}
+
+// A campaign = a batch of scheduled posts produced by the agent's plan_campaign
+// capability (one ask -> the whole arc). Rendered as a calendar in the right rail.
+interface CampaignPost {
+  id: string
+  title: string | null
+  copy: string
+  channel: string
+  status: string
+  scheduled_at: string | null
+  hashtags?: string[] | null
+  image_prompt?: string | null
+  campaign_id?: string
+  media_url?: string
+  media_type?: string
+}
+interface CampaignData {
+  id: string
+  name: string
+  theme: string | null
+  channel: string
+  channels?: string[]
+  cadence: string
+  count: number
+  posts: CampaignPost[]
+}
+
+
+
+
+const TOOL_LABEL: Record<string, string> = {
+  run_pipeline: 'Drafting with the team',
+  generate_image: 'Generating image',
+  generate_infographic: 'Generating infographic',
+  generate_video_storyboard: 'Building storyboard',
+  generate_video: 'Generating video',
+  web_search: 'Searching the web',
+  kb_search: 'Checking knowledge',
+  remember: 'Saving to memory',
+}
+
+export default function AgentClient() {
+  const { activeOrg } = useOrg()
+  const { activeProject } = useProject()
+  const { user } = useAuth()
+  const { push } = useToast()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [streaming, setStreaming] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+  const [draft, setDraft] = useState<Post | null>(null)
+  const [draftHistory, setDraftHistory] = useState<Post[]>([])
+  const [campaign, setCampaign] = useState<CampaignData | null>(null)
+  const [approving, setApproving] = useState(false)
+  const [stats, setStats] = useState<CommandStats>(EMPTY_COMMAND_STATS)
+  const [sessionId, setSessionId] = useState<string>('')
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [setup, setSetup] = useState<{ business: boolean; audience: boolean; voice: boolean; categories: boolean; knowledge: boolean } | null>(null)
+
+  useEffect(() => {
+    setDraft(null)
+    setDraftHistory([])
+    setCampaign(null)
+  }, [activeProject?.id])
+
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const taRef = useRef<HTMLTextAreaElement | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  async function functionHeaders() {
+    const { data, error } = await supabase.auth.getSession()
+    if (error) throw error
+    const token = data.session?.access_token
+    if (!token) throw new Error('Sign in again before using Sona.')
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: ANON,
+    }
+  }
+
+  // Establish the active chat session per client (persisted in localStorage).
+  useEffect(() => {
+    const pid = activeProject?.id
+    if (!pid) { setSessionId(''); return }
+    const key = `vera-session:${pid}`
+    const stored = localStorage.getItem(key)
+    if (stored) { setSessionId(stored); return }
+    // No active-session pointer (new browser, cleared storage, or after a
+    // logout/login). Reopen the project's MOST RECENT session instead of a blank
+    // new chat, so a refresh never buries the last conversation in history.
+    // Scoped to project_id, so it only ever surfaces this space's own sessions.
+    let cancelled = false
+    supabase.from('chat_messages')
+      .select('session_id')
+      .eq('project_id', pid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (cancelled) return
+        const recent = (data as Array<{ session_id: string }> | null)?.[0]?.session_id
+        const sid = recent ?? crypto.randomUUID()
+        try { localStorage.setItem(key, sid) } catch { /* ignore */ }
+        setSessionId(sid)
+      }, () => {
+        if (cancelled) return
+        const sid = crypto.randomUUID()
+        try { localStorage.setItem(key, sid) } catch { /* ignore */ }
+        setSessionId(sid)
+      })
+    return () => { cancelled = true }
+  }, [activeProject?.id])
+
+  // Load the current session's messages (re-runs on session switch / New chat).
+  useEffect(() => {
+    if (!activeProject?.id || !sessionId) { setMessages([]); setHistoryLoaded(!!activeProject?.id); return }
+    let cancelled = false
+    setHistoryLoaded(false)
+    const key = chatHistoryKey(activeProject.id, sessionId)
+    const cached = parseStoredMessages(localStorage.getItem(key))
+    setMessages(cached)
+    supabase.from('chat_messages')
+      .select('id, role, content, attachments, created_at')
+      .eq('project_id', activeProject.id)
+      .eq('session_id', sessionId)
+      .in('role', ['user', 'assistant'])
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_LIMIT)
+      .then(({ data }) => {
+        if (cancelled) return
+        const rows = (data ?? []) as Array<{ id: string; role: 'user' | 'assistant'; content: string | null; attachments?: StoredAttachment[] | null }>
+        const stored = rows.reverse().map(rowToMessage)
+        // The project-scoped DB query is the source of truth for this
+        // (project, session). Keep only still-pending local messages and drop
+        // cached content - so a cross-project localStorage cache can never keep
+        // another space's chat on screen when the DB has nothing here. Purge
+        // the stale key so it can't flash on the next load either.
+        setMessages(prev => mergeMessages(stored, prev.filter(m => m.pending)))
+        if (!stored.length) { try { localStorage.removeItem(key) } catch { /* ignore */ } }
+        setHistoryLoaded(true)
+      }, () => {
+        if (!cancelled) setHistoryLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [activeProject?.id, sessionId])
+
+  useEffect(() => {
+    if (!activeProject?.id) return
+    const key = `vera-command-prefill:${activeProject.id}`
+    const prefill = sessionStorage.getItem(key)
+    if (!prefill) return
+    sessionStorage.removeItem(key)
+    setInput(current => current.trim() ? current : prefill)
+    setTimeout(() => taRef.current?.focus(), 0)
+  }, [activeProject?.id])
+
+  useEffect(() => {
+    if (!activeProject?.id || !sessionId || !historyLoaded) return
+    try {
+      saveLocalChatMessages(activeProject.id, sessionId, messages)
+    } catch {
+      // Local storage can fill up when image previews are large. Database
+      // persistence still handles the durable copy.
+    }
+  }, [activeProject?.id, sessionId, historyLoaded, messages])
+
+  // Restore the open draft on load - but ONLY the draft that belongs to THIS
+  // session. The card is client state that a refresh wipes, so a mid-work
+  // refresh should bring it back. The earlier version reopened the latest post
+  // for the whole client, which surfaced a STALE draft in a brand-new chat
+  // (and made Sona talk about "this draft" the operator never created). We now
+  // key the open draft to the session via localStorage: a fresh chat has no
+  // key -> no draft -> nothing phantom for Sona to reference.
+  useEffect(() => {
+    if (!activeProject?.id || !sessionId) return
+    let did: string | null = null
+    try { did = localStorage.getItem(`vera-draft:${sessionId}`) } catch { /* ignore */ }
+    if (!did) return  // this session never opened a draft - don't surface a stale one
+    let cancelled = false
+    supabase.from('content_posts')
+      .select('*')
+      .eq('id', did)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setDraft(prev => prev ?? (data as Post))
+        setDraftHistory(prev => (prev.length ? prev : [data as Post]))
+      })
+    return () => { cancelled = true }
+  }, [activeProject?.id, sessionId])
+
+  const [providerCapabilities, setProviderCapabilities] = useState<ProviderCapabilities>(DEFAULT_PROVIDER_CAPABILITIES)
+  const { catalog: pricingCatalog, source: pricingSource, rowCount: pricingRowCount } = useModelPricingCatalog()
+
+  useEffect(() => {
+    if (!activeOrg?.id || !activeProject?.id) {
+      setProviderCapabilities(DEFAULT_PROVIDER_CAPABILITIES)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      const [{ data: org }, { data: rows }, { data: project }, { data: entitlements }] = await Promise.all([
+        supabase.from('organizations').select('is_master').eq('id', activeOrg.id).maybeSingle(),
+        supabase.from('client_api_keys').select('provider').eq('project_id', activeProject.id).eq('status', 'active').in('provider', ['anthropic', 'openrouter', 'openai', 'fal', 'fal_ai']),
+        supabase.from('projects').select('ai_policy').eq('id', activeProject.id).maybeSingle(),
+        user?.id
+          ? supabase.from('ai_user_entitlements')
+            .select('org_id, project_id, capability, expires_at')
+            .eq('user_id', user.id)
+            .in('capability', ['platform_fal_video', 'platform_fal_image'])
+            .eq('enabled', true)
+          : Promise.resolve({ data: [] }),
+      ])
+      if (cancelled) return
+      const isMaster = !!(org as { is_master?: boolean } | null)?.is_master
+      const aiPolicy = parseClientAiPolicy((project as { ai_policy?: unknown } | null)?.ai_policy)
+      const providers = new Set(((rows ?? []) as Array<{ provider: string | null }>).map(row => row.provider).filter(Boolean) as string[])
+      const platformMediaProject = PLATFORM_MEDIA_KEYS_ENABLED && aiPolicy.platformMediaKeysEnabled && isMaster && activeProject.slug === 'innovareai-brand'
+      const hasAnthropic = providers.has('anthropic')
+      const hasOpenRouter = providers.has('openrouter')
+      const hasOpenAI = providers.has('openai')
+      const hasFal = providers.has('fal') || providers.has('fal_ai')
+      const entitlementRows = (entitlements ?? []) as Array<{ org_id?: string | null; project_id?: string | null; capability?: string | null; expires_at?: string | null }>
+      const entitlementApplies = (row: { org_id?: string | null; project_id?: string | null; expires_at?: string | null }) => {
+          if (!platformMediaProject) return false
+          if (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) return false
+          if (row.project_id) return row.project_id === activeProject.id
+          if (row.org_id) return row.org_id === activeOrg.id
+          return false
+      }
+      const hasPlatformImageEntitlement = entitlementRows.some(row => row.capability === 'platform_fal_image' && entitlementApplies(row))
+      const hasPlatformVideoEntitlement = entitlementRows.some(row => row.capability === 'platform_fal_video' && entitlementApplies(row))
+      const clientImageRoute = imageModelProvider(aiPolicy.defaultImageModel, { hasOpenRouter, hasOpenAI, hasFal })
+      const platformImageRoute = platformMediaProject && hasPlatformImageEntitlement
+        ? imageModelProvider(aiPolicy.defaultImageModel, { hasOpenRouter: true, hasOpenAI: true, hasFal: false })
+        : null
+      setProviderCapabilities({
+        loaded: true,
+        isMaster,
+        hasAnthropic,
+        hasOpenRouter,
+        hasOpenAI,
+        hasFal,
+        imagesEnabled: aiPolicy.imagesEnabled,
+        standardVideoEnabled: aiPolicy.standardVideoEnabled,
+        premiumMediaEnabled: aiPolicy.premiumMediaEnabled,
+        platformMediaKeysEnabled: aiPolicy.platformMediaKeysEnabled,
+        hasPlatformImageEntitlement,
+        hasPlatformVideoEntitlement,
+        textReady: platformMediaProject || hasAnthropic || hasOpenRouter,
+        imageReady: aiPolicy.imagesEnabled && (!!clientImageRoute || !!platformImageRoute),
+        videoReady: (hasFal && (aiPolicy.standardVideoEnabled || aiPolicy.premiumMediaEnabled)) || hasPlatformVideoEntitlement,
+        needsTextKey: !platformMediaProject && !hasAnthropic && !hasOpenRouter,
+        defaultTextModel: aiPolicy.defaultTextModel,
+        defaultImageModel: aiPolicy.defaultImageModel,
+        defaultVideoModel: aiPolicy.defaultVideoModel,
+        defaultImageVideoModel: aiPolicy.defaultImageVideoModel,
+        budgetGuardEnabled: aiPolicy.budgetGuardEnabled,
+        budgetGuardMode: aiPolicy.budgetGuardMode,
+        monthlyBudgetUsd: aiPolicy.monthlyBudgetUsd,
+      })
+    })()
+    return () => { cancelled = true }
+  }, [activeOrg?.id, activeProject?.id, activeProject?.slug, user?.id])
+
+  // Resume any in-flight video renders on load. A render that was still going
+  // when the page was refreshed / closed used to be lost forever (its fal
+  // request_id only lived in the poll loop). Now it's recorded in video_jobs,
+  // so we pick up every 'rendering' job for this space and keep polling until
+  // the clip lands - it writes through to the post + the message attachment, so
+  // the video appears whether or not the operator is still on the same thread.
+  // Age-capped at 30 min so a genuinely stuck job doesn't retry on every load.
+  const resumedJobs = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!activeProject?.id) return
+    let cancelled = false
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    supabase.from('video_jobs')
+      .select('request_id, slug, post_id, message_id')
+      .eq('project_id', activeProject.id)
+      .eq('status', 'rendering')
+      .gte('created_at', cutoff)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        for (const job of data as Array<{ request_id: string; slug: string | null; post_id: string | null; message_id: string | null }>) {
+          if (resumedJobs.current.has(job.request_id)) continue
+          resumedJobs.current.add(job.request_id)
+          if (job.message_id) setMessages(prev => prev.map(m => m.id === job.message_id ? { ...m, videoPending: true } : m))
+          void pollVideo(job.request_id, job.slug ?? 'hailuo', job.message_id ?? crypto.randomUUID(), { postId: job.post_id })
+        }
+      })
+    return () => { cancelled = true }
+  }, [activeProject?.id])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resume watching any server-side carousel job still processing on load - the
+  // render keeps going on the server even if the tab was closed, so re-attach
+  // and show it filling in.
+  const watchedCarousels = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!activeProject?.id) return
+    let cancelled = false
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    supabase.from('media_jobs')
+      .select('post_id, spec')
+      .eq('project_id', activeProject.id)
+      .eq('kind', 'carousel')
+      .eq('status', 'processing')
+      .gte('created_at', cutoff)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        for (const job of data as Array<{ post_id: string | null; spec: { frames?: unknown[] } | null }>) {
+          if (!job.post_id || watchedCarousels.current.has(job.post_id)) continue
+          const total = Array.isArray(job.spec?.frames) ? job.spec!.frames!.length : 0
+          void watchCarousel(job.post_id, total, crypto.randomUUID())
+        }
+      })
+    return () => { cancelled = true }
+  }, [activeProject?.id])  // eslint-disable-line react-hooks/exhaustive-deps
+
+
+  // Live counts for the command desk and launcher quick-action descriptions.
+  useEffect(() => {
+    if (!activeOrg?.id) { setStats(EMPTY_COMMAND_STATS); return }
+    let pq = supabase.from('content_posts').select('status').eq('org_id', activeOrg.id).limit(1000)
+    if (activeProject?.id) pq = pq.eq('project_id', activeProject.id)
+    const cq = supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('org_id', activeOrg.id)
+    Promise.all([pq, cq]).then(([pr, cr]) =>
+      setStats({
+        ...(pr.error ? EMPTY_COMMAND_STATS : commandStatsFromPosts(pr.data as Array<{ status?: string | null }> | null)),
+        campaigns: cr.error ? 0 : (cr.count ?? 0),
+      }))
+  }, [activeOrg?.id, activeProject?.id])
+
+  // Brain readiness - SONA writes sharper when the client's brain is set up, so
+  // when it's thin we make "set up the brain" the obvious first step (the spine
+  // starts at the brain, persona-first). Cheap count probes per client; guards
+  // on errors so a missing table reads as "not done" rather than crashing idle.
+  useEffect(() => {
+    if (!activeProject?.id || !activeOrg?.id) { setSetup(null); return }
+    let cancelled = false
+    const pid = activeProject.id, oid = activeOrg.id
+    const instr = (activeProject.instructions ?? '').trim()
+    Promise.all([
+      supabase.from('audiences').select('id', { count: 'exact', head: true }).eq('project_id', pid),
+      supabase.from('brand_voice').select('tone, system_prompt, sample_posts').or(`project_id.eq.${pid},and(project_id.is.null,org_id.eq.${oid})`).limit(6),
+      supabase.from('content_categories').select('id', { count: 'exact', head: true }).eq('project_id', pid),
+      supabase.from('project_knowledge').select('id', { count: 'exact', head: true }).eq('project_id', pid),
+    ]).then(([aud, voice, cat, kb]) => {
+      if (cancelled) return
+      const vr = (voice.data ?? []) as { tone?: string[] | null; system_prompt?: string | null; sample_posts?: string[] | null }[]
+      const voiceReady = vr.some(v => (v.tone?.length ?? 0) > 0 || (v.system_prompt ?? '').trim().length > 0 || (v.sample_posts?.length ?? 0) > 0)
+      const parsedInstructions = parseProjectInstructions(instr)
+      setSetup({
+        business: hasBusinessContext(parsedInstructions.businessContext),
+        audience: !aud.error && (aud.count ?? 0) > 0,
+        voice: voiceReady,
+        categories: !cat.error && (cat.count ?? 0) > 0,
+        knowledge: (!kb.error && (kb.count ?? 0) > 0) || instr.length > 0,
+      })
+    })
+    return () => { cancelled = true }
+  }, [activeProject?.id, activeOrg?.id, activeProject?.instructions])
+
+  // Auto-scroll
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })
+  }, [messages])
+
+  const persistChatMessage = useCallback(async (message: Message) => {
+    if (!activeOrg?.id || !activeProject?.id || !sessionId || message.pending) return
+    const attachmentsForStorage = serializeMessageAttachments(message)
+    if (!message.content.trim() && attachmentsForStorage.length === 0) return
+
+    try {
+      const key = chatHistoryKey(activeProject.id, sessionId)
+      const cached = parseStoredMessages(localStorage.getItem(key))
+      saveLocalChatMessages(activeProject.id, sessionId, mergeMessages(cached, [message]).slice(-HISTORY_LIMIT))
+    } catch {
+      // The database write below is the durable copy when local storage is full.
+    }
+
+    const { error } = await supabase.from('chat_messages').upsert({
+      id: message.id,
+      org_id: activeOrg.id,
+      project_id: activeProject.id,
+      session_id: sessionId,
+      role: message.role,
+      content: message.content,
+      attachments: attachmentsForStorage,
+    }, { onConflict: 'id' })
+
+    if (error) {
+      console.warn('chat history save failed', error.message)
+      return
+    }
+    window.dispatchEvent(new CustomEvent('vera:session', { detail: { sid: sessionId } }))
+  }, [activeOrg?.id, activeProject?.id, sessionId])
+
+  // Auto-grow composer
+  useEffect(() => {
+    const el = taRef.current
+    if (!el) return
+    const minHeight = messages.length === 0 ? 118 : 100
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, minHeight), 240)}px`
+  }, [input, messages.length])
+
+  // "Go home" - clicking the Sona item in the rail (while already here) returns
+  // to the launcher, the way people expect the logo/home to behave. The prior
+  // chat is saved (Recents/History). A ref keeps the latest closure so the
+  // listener never goes stale.
+  const newChatRef = useRef<() => void>(() => {})
+  useEffect(() => { newChatRef.current = newChat })
+  useEffect(() => {
+    const h = () => newChatRef.current()
+    window.addEventListener('vera:home', h)
+    return () => window.removeEventListener('vera:home', h)
+  }, [])
+
+  // Resume a chat from the rail's Recents (when already mounted on Sona).
+  const pickSessionRef = useRef<(sid: string) => void>(() => {})
+  useEffect(() => { pickSessionRef.current = pickSession })
+  // Track the live session id for the listener below (its effect has [] deps,
+  // so a captured `sessionId` would be stale).
+  const sessionIdRef = useRef(sessionId)
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+  useEffect(() => {
+    const h = (e: Event) => {
+      const sid = (e as CustomEvent).detail?.sid
+      // Only switch for a DIFFERENT session. persistChatMessage fires this event
+      // on every save (to refresh the rail's Recents) with the CURRENT session -
+      // pickSession on that would clear the open draft, making the rail vanish on
+      // every message. Ignore same-session pings.
+      if (sid && sid !== sessionIdRef.current) pickSessionRef.current(sid)
+    }
+    window.addEventListener('vera:session', h)
+    return () => window.removeEventListener('vera:session', h)
+  }, [])
+
+  const send = useCallback(async (override?: string) => {
+    const text = (override ?? input).trim()
+    if ((!text && attachments.length === 0) || streaming || !activeOrg?.id) return
+
+    const atts = attachments
+    const imageAtts = atts.filter((a): a is ImageAttachment => a.kind === 'image')
+    const docAtts = atts.filter((a): a is DocumentAttachment => a.kind === 'document')
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text,
+      images: imageAtts.length ? imageAtts.map(a => a.dataUrl) : undefined,
+      files: docAtts.length ? docAtts.map(a => ({ name: a.name, mime: a.mime, size: a.size })) : undefined,
+    }
+    const assistantId = crypto.randomUUID()
+    // The draft created earlier in THIS stream (save_draft -> draft event), so a
+    // video_pending later in the same stream can be filed against the right
+    // post. The closure's `draft` state is stale (null at send time), so we
+    // track it locally as the stream's events arrive.
+    let streamDraftId: string | null = draft?.id ?? null
+    const placeholder: Message = { id: assistantId, role: 'assistant', content: '', pending: true }
+    const next = [...messages, userMsg]
+    setMessages([...next, placeholder])
+    setInput('')
+    setAttachments([])
+    setStreaming(true)
+    void persistChatMessage(userMsg)
+    if (atts.length) void persistAttachmentsToStudio(atts)
+
+    const wire: Array<{ role: string; content: unknown }> = next.map(m => ({ role: m.role, content: m.content }))
+    // Compose the outgoing user turn: typed text + the open draft as context
+    // (so "tweak the draft" doesn't force a re-paste) + any attachments as
+    // content blocks. Only the outgoing turn is enriched; the thread copy
+    // stays clean.
+    if (wire.length) {
+      let outText = text
+      if (draft?.copy) {
+        outText += `\n\n---\n[The draft currently open in the preview${draft.id ? ` (id: ${draft.id})` : ''}. If I ask you to tweak, edit, refine, shorten, or change "the draft/copy/post", revise THIS exact text in place and return the full updated post. Do not ask me to paste it again:]\n${draft.copy}`
+      }
+      const contentBlocks: WireContentBlock[] = [
+        ...docAtts.map(a => a.document),
+        ...imageAtts.map(a => ({
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: a.mime, data: a.dataUrl.split(',')[1] ?? '' },
+        })),
+        { type: 'text', text: outText || attachmentPrompt(atts) },
+      ]
+      wire[wire.length - 1] = atts.length
+        ? { role: 'user', content: contentBlocks }
+        : { role: 'user', content: outText }
+    }
+    const controller = new AbortController()
+    abortRef.current = controller
+    let acc = ''
+    const assistantImages: string[] = []
+    const assistantVideos: string[] = []
+
+    try {
+      const res = await fetch(`${SUPA}/functions/v1/vera-chat`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: await functionHeaders(),
+        body: JSON.stringify({
+          messages: wire,
+          org_id: activeOrg.id,
+          user_id: user?.id ?? null,
+          project_id: activeProject?.id ?? null,
+          session_id: sessionId || null,
+          // Share the client-generated ids so the edge writes the SAME row the
+          // frontend upserts - one row per message, not two with different ids
+          // (the duplicate rows were what made a refresh drop the last message).
+          user_message_id: userMsg.id,
+          assistant_message_id: assistantId,
+          route: pathname,
+        }),
+      })
+      if (!res.ok || !res.body) {
+        const err = await res.text().catch(() => '')
+        throw new Error(`HTTP ${res.status}: ${err.slice(0, 160)}`)
+      }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let idx
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, idx); buffer = buffer.slice(idx + 2)
+          const line = frame.split('\n').find(l => l.startsWith('data: '))
+          if (!line) continue
+          let ev: Record<string, unknown>
+          try { ev = JSON.parse(line.slice(6)) } catch { continue }
+
+          if (ev.type === 'delta' && typeof ev.text === 'string') {
+            acc += ev.text
+            setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: acc } : m))
+          } else if (ev.type === 'tool_start') {
+            setMessages(prev => prev.map(m => m.id === assistantId
+              ? { ...m, tools: [...(m.tools ?? []), { id: ev.id as string, tool: ev.tool as string, status: 'running' }] } : m))
+          } else if (ev.type === 'tool_progress') {
+            setMessages(prev => prev.map(m => m.id === assistantId
+              ? { ...m, tools: (m.tools ?? []).map(tl => tl.tool === ev.tool && tl.status === 'running' ? { ...tl, message: ev.status as string } : tl) } : m))
+          } else if (ev.type === 'tool_end') {
+            setMessages(prev => prev.map(m => m.id === assistantId
+              ? { ...m, tools: (m.tools ?? []).map(tl => tl.id === ev.id ? { ...tl, status: 'done' } : tl) } : m))
+          } else if (ev.type === 'budget_warning') {
+            const warning = ev.warning as Record<string, unknown> | undefined
+            const message = typeof warning?.message === 'string' ? warning.message : 'This generation request needs a generation budget review.'
+            push({
+              kind: 'warn',
+              title: 'Generation budget warning',
+              body: message,
+              duration: 9000,
+            })
+          } else if (ev.type === 'image' && typeof ev.url === 'string') {
+            const url = ev.url as string
+            assistantImages.push(url)
+            setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, images: [...(m.images ?? []), url] } : m))
+            // attach to the open draft if there is one
+            setDraft(prev => prev ? { ...prev, media_url: url, media_type: 'image' } : prev)
+          } else if (ev.type === 'video' && typeof ev.url === 'string') {
+            const vurl = ev.url as string
+            assistantVideos.push(vurl)
+            setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, videos: [...(m.videos ?? []), vurl] } : m))
+            // attach to the open draft if there is one
+            setDraft(prev => prev ? { ...prev, media_url: vurl, media_type: 'video' } : prev)
+          } else if (ev.type === 'video_pending' && typeof ev.request_id === 'string') {
+            // Video renders for 60-120s - too long to hold this connection open.
+            // The backend already submitted the fal job; poll for the result
+            // with short requests so nothing times out. Fire-and-forget: this
+            // keeps running after the SSE stream below closes.
+            setMessages(prev => prev.map(m => m.id === assistantId ? {
+              ...m, videoPending: true,
+              // Don't let the tool flip to done - it's still rendering. Keep it
+              // "running" so the caption + pulse match reality (tester saw a
+              // misleading checkmark on a video that couldn't play yet).
+              tools: (m.tools ?? []).map(tl => tl.tool === 'generate_video' ? { ...tl, status: 'running' as const } : tl),
+            } : m))
+            // Record the render durably so it survives a refresh / tab close.
+            // The request_id used to live only in this poll loop - losing the
+            // page lost the clip with no id to recover it. Now any 'rendering'
+            // job is resumed on load (see the resume effect below).
+            const reqId = ev.request_id as string
+            const vslug = (ev.slug as string) ?? 'hailuo'
+            if (activeProject?.id) {
+              void supabase.from('video_jobs').upsert({
+                request_id: reqId, slug: vslug, post_id: streamDraftId,
+                project_id: activeProject.id, session_id: sessionId, message_id: assistantId,
+                status: 'rendering', prompt: typeof ev.prompt === 'string' ? ev.prompt : null,
+              }, { onConflict: 'request_id' })
+            }
+            void pollVideo(reqId, vslug, assistantId, { postId: streamDraftId })
+          } else if (ev.type === 'carousel_job') {
+            // The server (generate-carousel + media_jobs) is rendering the frames
+            // in the background. We don't do the work - just watch the post fill
+            // in. Survives a closed tab; resumes on reload (see resume effect).
+            void watchCarousel((ev.post_id as string) ?? streamDraftId, (ev.total as number) ?? 0, assistantId)
+          } else if (ev.type === 'draft' && ev.post) {
+            const post = ev.post as Post
+            streamDraftId = (post.id as string) ?? streamDraftId
+            setDraft(post)
+            // Remember this is THIS session's open draft, so a refresh restores
+            // it (and a fresh chat doesn't surface someone else's stale draft).
+            if (post.id && sessionId) { try { localStorage.setItem(`vera-draft:${sessionId}`, post.id as string) } catch { /* ignore */ } }
+            // Keep every version so the operator can flip back through drafts
+            // (tester: tweaking made the previous draft vanish).
+            setDraftHistory(prev => [...prev, post])
+            // Reveal the rail so the new draft is visible even if collapsed.
+            window.dispatchEvent(new CustomEvent('vera:rail-open'))
+          } else if (ev.type === 'campaign' && ev.campaign) {
+            // The agent ran plan_campaign - a whole batch of scheduled posts.
+            // Show the calendar in the rail; clicking a post opens it.
+            const meta = ev.campaign as Record<string, unknown>
+            const posts = (ev.posts as CampaignPost[]) ?? []
+            setDraft(null)
+            setCampaign({
+              id: meta.id as string,
+              name: (meta.name as string) ?? 'Campaign',
+              theme: (meta.theme as string) ?? null,
+              channel: (meta.channel as string) ?? 'LinkedIn',
+              channels: Array.isArray(meta.channels) ? meta.channels.map(String).filter(Boolean) : undefined,
+              cadence: (meta.cadence as string) ?? 'weekly',
+              count: posts.length,
+              posts,
+            })
+            window.dispatchEvent(new CustomEvent('vera:rail-open'))
+          } else if (ev.type === 'error') {
+            throw new Error((ev.message as string) ?? 'stream error')
+          }
+        }
+      }
+      const finalAssistant: Message = {
+        id: assistantId,
+        role: 'assistant',
+        content: acc,
+        images: assistantImages.length ? assistantImages : undefined,
+        videos: assistantVideos.length ? assistantVideos : undefined,
+      }
+      setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, pending: false } : m))
+      void persistChatMessage(finalAssistant)
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') {
+        const stoppedAssistant: Message = { id: assistantId, role: 'assistant', content: acc }
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, pending: false } : m))
+        void persistChatMessage(stoppedAssistant)
+      } else {
+        const errorContent = acc || `Warning: ${(e as Error).message}`
+        const failedAssistant: Message = { id: assistantId, role: 'assistant', content: errorContent }
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, pending: false, content: m.content || errorContent } : m))
+        void persistChatMessage(failedAssistant)
+      }
+    } finally {
+      setStreaming(false)
+      abortRef.current = null
+    }
+    // pollVideo and watchCarousel are long-running stream helpers. Keep send bound
+    // to route, session, and message state so active streams do not churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, streaming, activeOrg?.id, activeProject?.id, user?.id, messages, pathname, sessionId, draft, attachments, push, persistChatMessage])
+
+  // Poll a backgrounded fal video job (submitted by vera-chat) until the MP4
+  // is ready, then drop it into the chat and the open draft. Short polling
+  // requests only - nothing is held open long enough for the gateway to kill
+  // it, which is what produced the "network error" at ~47s. Runs after the
+  // chat SSE stream has already closed.
+  async function pollVideo(requestId: string, slug: string, assistantId: string, opts?: { postId?: string | null }) {
+    const postId = opts?.postId ?? null
+    const INTERVAL = 5000
+    const MAX_TRIES = 72 // 72 x 5s = 6 min ceiling
+    for (let i = 0; i < MAX_TRIES; i++) {
+      await new Promise(r => setTimeout(r, INTERVAL))
+      let data: { status?: string; video_url?: string | null }
+      try {
+        const res = await fetch(`${SUPA}/functions/v1/generate-video`, {
+          method: 'POST',
+          headers: await functionHeaders(),
+          body: JSON.stringify({ action: 'status', request_id: requestId, slug, project_id: activeProject?.id ?? null }),
+        })
+        if (!res.ok) continue
+        data = await res.json()
+      } catch { continue } // transient blip - keep polling
+
+      if (data.status === 'COMPLETED' && data.video_url) {
+        const vurl = data.video_url
+        setMessages(prev => prev.map(m => m.id === assistantId
+          ? { ...m, videoPending: false, videos: [...(m.videos ?? []), vurl], tools: (m.tools ?? []).map(tl => tl.tool === 'generate_video' ? { ...tl, status: 'done' as const } : tl) } : m))
+        // Write to the post by its known id (deterministic - works on a resume
+        // after refresh where there's no in-memory draft), and reflect it on the
+        // open card if it's the same post. BACKSTOP: if we never got a post id
+        // (the draft context was lost / out-of-order tool calls), find the most
+        // recent media-less draft for this space and attach the clip there, so
+        // a rendered video can NEVER end up orphaned in the chat with no post.
+        let targetPostId = postId ?? draft?.id ?? null
+        if (!targetPostId && activeProject?.id) {
+          const { data: orphan } = await supabase.from('content_posts')
+            .select('id').eq('project_id', activeProject.id).is('media_url', null)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle()
+          targetPostId = (orphan as { id?: string } | null)?.id ?? null
+        }
+        if (targetPostId) void supabase.from('content_posts').update({ media_url: vurl, media_type: 'video' }).eq('id', targetPostId)
+        setDraft(prev => (prev && (!targetPostId || prev.id === targetPostId)) ? { ...prev, media_url: vurl, media_type: 'video' } : prev)
+        // The job is done - stop it being resumed on the next load.
+        void supabase.from('video_jobs').update({ status: 'completed', video_url: vurl, updated_at: new Date().toISOString() }).eq('request_id', requestId)
+        // Persist the clip so it survives a refresh: it finishes AFTER the
+        // assistant message was saved, so it isn't in attachments yet. Append
+        // it to this session's latest assistant message.
+        if (activeProject?.id && sessionId) {
+          void (async () => {
+            const { data: last } = await supabase.from('chat_messages')
+              .select('id, attachments')
+              .eq('project_id', activeProject.id).eq('session_id', sessionId).eq('role', 'assistant')
+              .order('created_at', { ascending: false }).limit(1).maybeSingle()
+            if (last) {
+              const prevAtts = Array.isArray((last as { attachments?: unknown }).attachments) ? (last as { attachments: unknown[] }).attachments : []
+              await supabase.from('chat_messages')
+                .update({ attachments: [...prevAtts, { kind: 'video', url: vurl }] })
+                .eq('id', (last as { id: string }).id)
+            }
+          })()
+        }
+        return
+      }
+      if (data.status === 'FAILED' || data.status === 'CANCELLED' || data.status === 'ERROR') {
+        setMessages(prev => prev.map(m => m.id === assistantId
+          ? { ...m, videoPending: false, content: (m.content ? m.content + '\n\n' : '') + `Warning: Video rendering failed (${(data.status ?? '').toLowerCase()}). Try again or tweak the prompt.` } : m))
+        void supabase.from('video_jobs').update({ status: 'failed', error: (data.status ?? 'failed').toLowerCase(), updated_at: new Date().toISOString() }).eq('request_id', requestId)
+        return
+      }
+      // IN_QUEUE / IN_PROGRESS -> keep polling
+    }
+    setMessages(prev => prev.map(m => m.id === assistantId
+      ? { ...m, videoPending: false, content: (m.content ? m.content + '\n\n' : '') + 'Warning: Video is taking longer than usual. It may still be rendering. Try again shortly.' } : m))
+  }
+
+  // Watch a server-side carousel job fill in. generate-carousel renders frames
+  // in the background (EdgeRuntime.waitUntil) and writes them onto the post as
+  // each lands; we poll the post for progress and reflect it on the draft card.
+  // The browser does NO generation - the render survives a closed tab, and the
+  // resume effect re-attaches to any still-processing job on reload.
+  async function watchCarousel(postId: string | null, total: number, assistantId: string) {
+    let target = postId
+    if (!target && activeProject?.id) {
+      const { data } = await supabase.from('content_posts').select('id').eq('project_id', activeProject.id).is('media_url', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      target = (data as { id?: string } | null)?.id ?? null
+    }
+    if (!target) return
+    if (watchedCarousels.current.has(target)) return
+    watchedCarousels.current.add(target)
+    setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, carouselPending: { done: 0, total } } : m))
+    const INTERVAL = 4000
+    const MAX_TRIES = 105 // 7 min ceiling
+    for (let i = 0; i < MAX_TRIES; i++) {
+      await new Promise(r => setTimeout(r, INTERVAL))
+      const { data: post } = await supabase.from('content_posts').select('*').eq('id', target).maybeSingle()
+      const frames = post ? (post as unknown as { media_metadata?: { frames?: Array<{ url: string }> } }).media_metadata?.frames : undefined
+      const done = frames?.length ?? 0
+      setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, carouselPending: { done, total: total || done } } : m))
+      if (post && done > 0) setDraft(prev => (!prev || prev.id === target) ? (post as Post) : prev)
+      const { data: job } = await supabase.from('media_jobs').select('status').eq('post_id', target).eq('kind', 'carousel').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      const status = (job as { status?: string } | null)?.status
+      if (status === 'completed' || status === 'failed' || (total > 0 && done >= total)) {
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, carouselPending: undefined } : m))
+        if (post) { setDraft(prev => (!prev || prev.id === target) ? (post as Post) : prev); setDraftHistory(prev => prev.some(p => p.id === target) ? prev : [...prev, post as Post]) }
+        window.dispatchEvent(new CustomEvent('vera:rail-open'))
+        watchedCarousels.current.delete(target)
+        if (status === 'failed' && done === 0) {
+          setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: (m.content ? m.content + '\n\n' : '') + 'Warning: Carousel generation failed on the server. Say "retry the carousel".' } : m))
+        }
+        return
+      }
+    }
+    setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, carouselPending: undefined } : m))
+    watchedCarousels.current.delete(target)
+  }
+
+  function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  }
+
+  // New chat - start a fresh session (new id). The load effect clears the
+  // thread; the AI's context resets because we only send this session's msgs.
+  function newChat() {
+    if (streaming) abortRef.current?.abort()
+    const sid = crypto.randomUUID()
+    if (activeProject?.id) { try { localStorage.setItem(`vera-session:${activeProject.id}`, sid) } catch { /* ignore */ } }
+    setDraft(null); setDraftHistory([]); setCampaign(null); setInput('')
+    setMessages([]); setSessionId(sid)
+    setTimeout(() => taRef.current?.focus(), 0)
+  }
+
+  // The rail "New session" button navigates here with ?new=<ts>. Start a fresh
+  // session, then drop the param so a later refresh doesn't wipe the thread.
+  useEffect(() => {
+    if (!searchParams.get('new')) return
+    newChat()
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete('new')
+    const query = next.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, pathname, router])
+
+  // "Pin to new chat" - start a fresh conversation carrying this result in as
+  // context. We persist the pinned text as the new session's first message so
+  // the session-load effect (which would otherwise wipe in-memory messages on
+  // session switch) rehydrates it; the next turn then has it in context.
+  async function pinToNewChat(content: string) {
+    if (!activeOrg?.id || !activeProject?.id || !content) return
+    if (streaming) abortRef.current?.abort()
+    const sid = crypto.randomUUID()
+    const pinned = `Pinned: **Pinned from a previous chat**\n\n${content}`
+    const { error } = await supabase.from('chat_messages').insert({
+      org_id: activeOrg.id,
+      project_id: activeProject.id,
+      user_id: user?.id ?? null,
+      session_id: sid,
+      role: 'assistant',
+      content: pinned,
+      route: pathname,
+    })
+    if (error) {
+      push({ kind: 'danger', title: "Couldn't pin result", body: error.message })
+      return
+    }
+    try { localStorage.setItem(`vera-session:${activeProject.id}`, sid) } catch { /* ignore */ }
+    setDraft(null); setDraftHistory([]); setCampaign(null); setInput('')
+    setSessionId(sid)   // load effect fetches the pinned message into the new thread
+    window.dispatchEvent(new CustomEvent('vera:session', { detail: { sid } }))  // refresh Recents
+    setTimeout(() => taRef.current?.focus(), 0)
+  }
+
+  function pickSession(sid: string) {
+    if (activeProject?.id) { try { localStorage.setItem(`vera-session:${activeProject.id}`, sid) } catch { /* ignore */ } }
+    setDraft(null); setDraftHistory([]); setCampaign(null); setSessionId(sid)
+  }
+
+  // Attachments: images become vision blocks, PDFs and text files become
+  // document blocks for the current turn.
+  async function handleFiles(files: FileList | null) {
+    if (!files || !files.length) return
+    setUploading(true)
+    const picked: ComposerAttachment[] = []
+    let skippedLarge = 0
+    let skippedUnsupported = 0
+    let skippedUnreadable = 0
+    let skippedLimit = 0
+    const remaining = Math.max(0, MAX_ATTACHMENTS - attachments.length)
+    if (!remaining) {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+      push({ kind: 'warn', title: 'Attachment limit reached', body: `Remove a file before adding another. Limit: ${MAX_ATTACHMENTS}.` })
+      return
+    }
+    for (const f of Array.from(files)) {
+      if (picked.length >= remaining) { skippedLimit++; continue }
+      const mime = attachmentMime(f)
+      if (f.size > MAX_ATTACHMENT_BYTES) { skippedLarge++; continue }
+      try {
+        if (isSupportedImage(mime)) {
+          const dataUrl = await readAsDataUrl(f)
+          picked.push({ kind: 'image', dataUrl, name: f.name, mime, size: f.size })
+        } else if (mime === 'application/pdf') {
+          const dataUrl = await readAsDataUrl(f)
+          picked.push({
+            kind: 'document',
+            name: f.name,
+            mime,
+            size: f.size,
+            document: {
+              type: 'document',
+              title: f.name,
+              context: `${mime} - ${bytesHuman(f.size)}`,
+              source: { type: 'base64', media_type: 'application/pdf', data: dataUrl.split(',')[1] ?? '' },
+            },
+          })
+        } else if (isTextDocument(f, mime)) {
+          const raw = await readAsText(f)
+          const truncated = raw.length > MAX_TEXT_DOCUMENT_CHARS
+          const text = truncated ? `${raw.slice(0, MAX_TEXT_DOCUMENT_CHARS)}\n\n[Document truncated in chat upload at ${MAX_TEXT_DOCUMENT_CHARS.toLocaleString()} characters.]` : raw
+          picked.push({
+            kind: 'document',
+            name: f.name,
+            mime,
+            size: f.size,
+            truncated,
+            document: {
+              type: 'document',
+              title: f.name,
+              context: `${mime} - ${bytesHuman(f.size)}${truncated ? ' - truncated' : ''}`,
+              source: { type: 'text', media_type: 'text/plain', data: text },
+            },
+          })
+        } else {
+          skippedUnsupported++
+        }
+      } catch { skippedUnreadable++ }
+    }
+    if (picked.length) setAttachments(prev => [...prev, ...picked].slice(0, MAX_ATTACHMENTS))
+    setUploading(false)
+    if (fileRef.current) fileRef.current.value = ''
+    const issues: string[] = []
+    if (skippedUnsupported) issues.push(`${skippedUnsupported} unsupported`)
+    if (skippedLarge) issues.push(`${skippedLarge} over ${bytesHuman(MAX_ATTACHMENT_BYTES)}`)
+    if (skippedUnreadable) issues.push(`${skippedUnreadable} unreadable`)
+    if (skippedLimit) issues.push(`${skippedLimit} over the ${MAX_ATTACHMENTS} file limit`)
+    if (issues.length) push({ kind: 'warn', title: 'Some files were skipped', body: issues.join(', ') })
+  }
+
+  // Persist chat attachments into Studio (the space's media/asset library) and,
+  // for documents, into searchable knowledge. Uploading a file in the chat then
+  // actually lands somewhere reusable, not just in this one turn. Reuses the
+  // same project-ingest path as the rest of the app.
+  async function studioBlobFromAttachment(a: ComposerAttachment): Promise<Blob | null> {
+    try {
+      if (a.kind === 'image') return await (await fetch(a.dataUrl)).blob()
+      const src = a.document.source as { type: string; data: string }
+      if (src.type === 'base64') {
+        const bin = atob(src.data)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        return new Blob([bytes], { type: a.mime })
+      }
+      if (src.type === 'text') return new Blob([src.data], { type: 'text/plain' })
+    } catch { /* ignore */ }
+    return null
+  }
+  async function persistAttachmentsToStudio(atts: ComposerAttachment[]) {
+    const pid = activeProject?.id
+    if (!pid || !atts.length) return
+    let saved = 0
+    for (const a of atts) {
+      const blob = await studioBlobFromAttachment(a)
+      if (!blob) continue
+      try {
+        const ext = a.name.includes('.') ? a.name.slice(a.name.lastIndexOf('.')) : ''
+        const storagePath = `${pid}/${crypto.randomUUID()}${ext}`
+        const { error: upErr } = await supabase.storage.from('project-assets').upload(storagePath, blob, { cacheControl: '3600', upsert: false, contentType: a.mime })
+        if (upErr) continue
+        const assetKind = a.kind === 'image' ? 'image' : (a.mime === 'application/pdf' ? 'pdf' : 'other')
+        const res = await fetch(`${SUPA}/functions/v1/project-ingest`, {
+          method: 'POST',
+          headers: await functionHeaders(),
+          body: JSON.stringify({ kind: 'file', project_id: pid, storage_path: storagePath, file_name: a.name, mime_type: a.mime, file_size: a.size, asset_kind: assetKind }),
+        })
+        if (res.ok) saved++
+      } catch { /* ignore individual failures */ }
+    }
+    if (saved) push({ kind: 'success', title: `Saved ${saved} file${saved === 1 ? '' : 's'} to Studio` })
+  }
+  function removeAttachment(i: number) { setAttachments(prev => prev.filter((_, idx) => idx !== i)) }
+
+  function onComposerDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!e.dataTransfer.files.length) return
+    e.preventDefault()
+    void handleFiles(e.dataTransfer.files)
+  }
+
+  function onComposerDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (e.dataTransfer.types.includes('Files')) e.preventDefault()
+  }
+
+
+  // --- Draft actions ----------------------------------------------
+  function ensureDraftInActiveProject(post: Post) {
+    if (!activeProject?.id || post.project_id !== activeProject.id) {
+      throw new Error('This draft belongs to another space. Reopen the draft in the active space.')
+    }
+  }
+
+  async function callApprovalWebhook(payload: Record<string, unknown>, bearer: string) {
+    const res = await fetch(`${SUPA}/functions/v1/approval-webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': `Bearer ${bearer}` },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => null) as { post?: Post; error?: string } | null
+    if (!res.ok) {
+      const err = new Error(data?.error ?? `HTTP ${res.status}`) as ApprovalWebhookError
+      err.status = res.status
+      throw err
+    }
+    return data?.post ?? null
+  }
+
+  async function approveDraft() {
+    if (!draft?.id) return
+    setApproving(true)
+    try {
+      ensureDraftInActiveProject(draft)
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) throw error
+      const reviewedBy = user?.email ?? user?.id ?? 'SONA operator'
+      let updated: Post | null = null
+
+      if (session?.access_token) {
+        try {
+          updated = await callApprovalWebhook({ post_id: draft.id, action: 'approved', reviewed_by: reviewedBy }, session.access_token)
+        } catch (e) {
+          const err = e as ApprovalWebhookError
+          if (err.status !== 401) throw err
+        }
+      }
+
+      if (!updated) {
+        const reviewToken = draft.review_token ?? await ensureReviewToken(draft)
+        updated = await callApprovalWebhook({ review_token: reviewToken, action: 'approved', reviewed_by: reviewedBy }, ANON)
+      }
+
+      if (!updated) throw new Error('Sign in again to approve directly, or generate a sharing link and approve from the review page.')
+      push({ kind: 'success', title: 'Approved', body: 'Moved to the review queue as approved.' })
+      setDraft(prev => prev?.id === draft.id ? { ...prev, ...updated } : prev)
+      setDraftHistory(prev => prev.map(p => p.id === draft.id ? { ...p, ...updated } : p))
+    } catch (e) {
+      push({ kind: 'danger', title: 'Approve failed', body: (e as Error).message })
+    } finally {
+      setApproving(false)
+    }
+  }
+  // "Send for approval" pins the completed post into the approval queue
+  // (status 'pending' = Awaiting approval, what the Review queue surfaces) and
+  // opens the reviewer's approval page with the link copied to share. The
+  // reviewer approves there; "Approve directly" is the skip-the-reviewer path.
+  // This is the explicit "completed -> in approval" move.
+  const [sending, setSending] = useState(false)
+  async function ensureReviewToken(post: Post): Promise<string> {
+    if (!post.id) throw new Error('Draft has no post id.')
+    ensureDraftInActiveProject(post)
+    let token = post.review_token ?? null
+    if (!token) {
+      const { data, error } = await supabase
+        .from('content_posts')
+        .select('review_token')
+        .eq('id', post.id)
+        .eq('project_id', activeProject!.id)
+        .maybeSingle()
+      if (error) throw error
+      token = (data as { review_token?: string | null } | null)?.review_token ?? null
+      if (token) {
+        setDraft(prev => prev?.id === post.id ? { ...prev, review_token: token } : prev)
+        setDraftHistory(prev => prev.map(p => p.id === post.id ? { ...p, review_token: token } : p))
+      }
+    }
+    if (!token) {
+      token = hexToken()
+      const { data, error } = await supabase
+        .from('content_posts')
+        .update({ review_token: token, review_token_revoked_at: null })
+        .eq('id', post.id)
+        .eq('project_id', activeProject!.id)
+        .select('review_token')
+        .single()
+      if (error) throw error
+      token = (data as { review_token?: string | null } | null)?.review_token ?? token
+      setDraft(prev => prev?.id === post.id ? { ...prev, review_token: token } : prev)
+      setDraftHistory(prev => prev.map(p => p.id === post.id ? { ...p, review_token: token } : p))
+    }
+    if (!token) throw new Error('This post does not have a review token yet.')
+    return token
+  }
+  async function reviewUrlForDraft(post: Post): Promise<string> {
+    const token = await ensureReviewToken(post)
+    return `${window.location.origin}/r/${token}`
+  }
+  async function sendForApproval() {
+    if (!draft?.id) return
+    setSending(true)
+    try {
+      ensureDraftInActiveProject(draft)
+      const url = await reviewUrlForDraft(draft)
+      const { error } = await supabase.from('content_posts')
+        .update({ status: 'pending' })
+        .eq('id', draft.id)
+        .eq('project_id', activeProject!.id)
+      if (error) throw error
+      setDraft(prev => prev ? { ...prev, status: 'pending' } : prev)
+      try { void navigator.clipboard?.writeText(url) } catch { /* ignore */ }
+      window.open(url, '_blank', 'noopener')
+      push({ kind: 'success', title: 'Sent for approval', body: 'In the approval queue (Review -> Pending Review). Link copied to share.' })
+    } catch (e) {
+      push({ kind: 'danger', title: "Couldn't send for approval", body: (e as Error).message })
+    } finally {
+      setSending(false)
+    }
+  }
+  function tweakDraft() {
+    setInput(`Tweak the draft: `)
+    setTimeout(() => taRef.current?.focus(), 0)
+  }
+  function regenerateDraft() {
+    setInput('Regenerate that draft. Same brief, fresh take.')
+    setTimeout(() => taRef.current?.focus(), 0)
+  }
+  const openProviderKeys = useCallback(() => {
+    if (activeProject?.slug) router.push(`/p/${activeProject.slug}/keys`)
+    else router.push('/spaces')
+  }, [activeProject?.slug, router])
+
+  // Push the draft artifact into the right rail
+  const draftIdx = draft ? draftHistory.findIndex(item => item.id === draft.id) : -1
+  useRightRail(
+    draft ? (
+      <DraftArtifact
+        draft={draft}
+        approving={approving}
+        sending={sending}
+        onApprove={approveDraft}
+        onSendForApproval={sendForApproval}
+        onCopyShareLink={async () => {
+          try {
+            const url = await reviewUrlForDraft(draft)
+            try { await navigator.clipboard?.writeText(url) } catch { /* ignore */ }
+            push({ kind: 'success', title: 'Sharing link copied', body: 'Public review link copied to the clipboard.' })
+          } catch (e) {
+            push({ kind: 'danger', title: "Couldn't generate sharing link", body: (e as Error).message })
+            throw e
+          }
+        }}
+        onTweak={tweakDraft}
+        onRegenerate={regenerateDraft}
+        onBack={campaign ? () => setDraft(null) : undefined}
+        versionIdx={draftIdx}
+        versionTotal={draftHistory.length}
+        onPrevVersion={draftIdx > 0 ? () => setDraft(draftHistory[draftIdx - 1]) : undefined}
+        onNextVersion={draftIdx >= 0 && draftIdx < draftHistory.length - 1 ? () => setDraft(draftHistory[draftIdx + 1]) : undefined}
+        providerCapabilities={providerCapabilities}
+        pricingCatalog={pricingCatalog}
+        pricingSource={pricingSource}
+        pricingRowCount={pricingRowCount}
+        onAddKey={openProviderKeys}
+      />
+    ) : campaign ? (
+      <CampaignArtifact campaign={campaign} onOpenPost={p => { const post = p as unknown as Post; if (post.id && sessionId) { try { localStorage.setItem(`vera-draft:${sessionId}`, post.id) } catch { /* ignore */ } } setDraft(post) }} />
+    ) : null,
+    [draft, campaign, approving, sending, draftIdx, draftHistory.length, user?.id, user?.email, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, openProviderKeys],
+    // Wide, readable artifact panel - this is the working surface, not a
+    // skinny sidebar. ~42vw, clamped so it stays sane on small + huge screens.
+    'clamp(420px, 42vw, 660px)',
+  )
+
+  const sessionTitle = useMemo(() => {
+    if (!messages.length) return null
+    return titleFromMessages(messages)
+  }, [messages])
+
+  const hasThread = messages.length > 0
+  const renderComposer = (placement: 'idle' | 'thread') => {
+    const idle = placement === 'idle'
+    return (
+      <div style={{ maxWidth: idle ? '100%' : 720, margin: '0 auto', width: '100%' }}>
+        <div onDrop={onComposerDrop} onDragOver={onComposerDragOver} style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: space[2],
+          padding: idle ? `${space[4]} ${space[5]}` : `${space[3]} ${space[4]}`,
+          background: color.surface,
+          border: `1px solid ${idle ? 'var(--accent-line)' : color.line2}`,
+          borderRadius: idle ? radius.lg : radius.lg,
+          boxShadow: idle ? 'var(--shadow-modal)' : 'var(--shadow-pop)',
+        }}>
+          {attachments.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[2] }}>
+              {attachments.map((a, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px 4px 4px', background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, fontSize: t.size.micro, color: color.ink2 }}>
+                  {a.kind === 'image'
+                    ? <img src={a.dataUrl} alt="" style={{ width: 26, height: 26, borderRadius: radius.sm, objectFit: 'cover', display: 'block' }} />
+                    : <FileText size={15} style={{ color: color.ghost }} />}
+                  <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                  {a.kind === 'document' && a.truncated && <span title="Truncated for this chat turn" style={{ color: color.ghost }}>trimmed</span>}
+                  <button onClick={() => removeAttachment(i)} title="Remove" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.ghost, display: 'inline-flex', padding: 0 }}><X size={13} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <textarea
+            ref={taRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={onKey}
+            rows={1}
+            placeholder="Ask Sona anything..."
+            disabled={!activeProject}
+            style={{ width: '100%', resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontFamily: t.family.sans, fontSize: idle ? t.size.h4 : t.size.lg, lineHeight: 1.5, color: color.ink, minHeight: idle ? 118 : 100, maxHeight: 240, paddingTop: 2 }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: space[3] }}>
+            <input ref={fileRef} type="file" accept={ACCEPTED_ATTACHMENT_TYPES} multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading || !activeProject} title="Attach images or documents"
+              style={{ width: 30, height: 30, borderRadius: '50%', border: `0.5px solid ${color.line}`, background: 'transparent', color: color.ghost, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: uploading ? 'default' : 'pointer', flexShrink: 0 }}>
+              <Paperclip size={14} />
+            </button>
+            <span style={{ flex: 1, fontSize: t.size.cap, color: color.faint, letterSpacing: '0.01em', userSelect: 'none' }}>Sona drafts, you approve</span>
+            {streaming ? (
+              <button onClick={() => abortRef.current?.abort()} title="Stop"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: radius.pill, border: 'none', cursor: 'pointer', background: color.ink, color: '#fff', fontSize: t.size.sm, fontWeight: t.weight.medium }}>
+                <Square size={11} fill="currentColor" /> Stop
+              </button>
+            ) : (
+              <button onClick={() => send()} disabled={(!input.trim() && attachments.length === 0) || !activeProject} title="Send"
+                style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', cursor: (input.trim() || attachments.length) ? 'pointer' : 'not-allowed', background: (input.trim() || attachments.length) ? color.accent : color.paper2, color: (input.trim() || attachments.length) ? '#fff' : color.ghost, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: (input.trim() || attachments.length) ? 'var(--shadow-glow)' : 'none', transition: 'background 120ms, box-shadow 120ms' }}>
+                <ArrowUp size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: color.paper, position: 'relative' }}>
+      {hasThread && sessionTitle && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: `9px 24px`, borderBottom: `0.5px solid ${color.line}`, background: color.paper, flexShrink: 0 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: color.success, flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: t.size.sm, fontWeight: t.weight.medium, color: color.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sessionTitle}
+          </span>
+          {activeProject?.name && (
+            <span style={{ fontSize: t.size.cap, color: color.ghost, flexShrink: 0 }}>{activeProject.name}</span>
+          )}
+          <span style={{ fontSize: t.size.cap, color: color.faint, flexShrink: 0 }}>Saved</span>
+        </div>
+      )}
+      <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: `${space[6]} 0 ${space[7]}` }}>
+        {!historyLoaded ? (
+          <Centered>Loading thread...</Centered>
+        ) : messages.length === 0 ? (
+          <Idle onRun={pr => send(pr)} actions={buildLaunchActions(stats)}
+            setup={setup} projectName={activeProject?.name ?? 'this space'}
+            onOpenBrain={() => { if (activeProject?.slug) router.push(`/p/${activeProject.slug}/brain`) }}
+            composer={renderComposer('idle')} />
+        ) : (
+          <div style={{ maxWidth: 680, margin: '0 auto', padding: `0 ${space[8]}`, display: 'flex', flexDirection: 'column', gap: space[7] }}>
+            {messages.map(m => <Bubble key={m.id} m={m} onPin={pinToNewChat} />)}
+          </div>
+        )}
+      </div>
+
+      {hasThread && (
+        <div style={{ padding: `${space[5]} ${space[8]} ${space[7]}` }}>
+          {renderComposer('thread')}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- message bubble -------------------------------------------------
+function Bubble({ m, onPin }: { m: Message; onPin?: (content: string) => void }) {
+  const [copied, setCopied] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState(false)
+  const actBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', border: 'none', background: 'transparent', color: color.ghost, fontSize: t.size.cap, fontWeight: t.weight.medium, cursor: 'pointer', borderRadius: radius.sm }
+  if (m.role === 'user') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: space[2] }}>
+        {m.images && m.images.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[2], justifyContent: 'flex-end', maxWidth: '78%' }}>
+            {m.images.map((src, i) => (
+              <img key={i} src={src} alt="" style={{ maxWidth: 160, maxHeight: 160, borderRadius: radius.md, border: `1px solid ${color.line}`, objectFit: 'cover', display: 'block' }} />
+            ))}
+          </div>
+        )}
+        {m.files && m.files.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[2], justifyContent: 'flex-end', maxWidth: '78%' }}>
+            {m.files.map((file, i) => (
+              <span key={`${file.name}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 10px', background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, fontSize: t.size.cap, color: color.ink2, maxWidth: 260 }}>
+                <FileText size={14} style={{ color: color.ghost, flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                <span style={{ color: color.ghost, flexShrink: 0 }}>{bytesHuman(file.size)}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {m.content && (
+          <div style={{ maxWidth: '78%', padding: `10px 15px`, background: 'var(--accent-tint)', borderRadius: 14, borderTopRightRadius: radius.sm, fontSize: t.size.lg, lineHeight: 1.5, color: color.ink, whiteSpace: 'pre-wrap' }}>
+            {m.content}
+          </div>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', gap: space[3] }}>
+      <span style={{ marginTop: 2, display: 'inline-flex', flexShrink: 0 }}><VeraAvatar size={40} /></span>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: space[3] }}>
+        {/* Floating, ephemeral commentary - shown only while the turn is
+            working, then it vanishes so the thread keeps just the result.
+            Light text, no boxes (Gemini-style). */}
+        {m.pending && m.tools && m.tools.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignSelf: 'flex-start' }}>
+            {m.tools.map((tl, i) => (
+              <div key={`${tl.id ?? tl.tool}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: t.size.cap, color: color.ghost }}>
+                {tl.status === 'running'
+                  ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: color.accent, animation: 'vera-pulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+                  : <Check size={12} style={{ color: color.accent, flexShrink: 0 }} />}
+                <span style={{ color: color.ink2 }}>{TOOL_LABEL[tl.tool] ?? tl.tool}</span>
+                {tl.message && <span>- {tl.message}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+        {m.images?.map((url, i) => (
+          <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', maxWidth: 320, border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden' }}>
+            <img src={url} alt="" style={{ width: '100%', display: 'block' }} />
+          </a>
+        ))}
+        {m.videos?.map((url, i) => (
+          <video key={i} src={url} controls autoPlay muted loop playsInline style={{ display: 'block', maxWidth: 320, border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden' }} />
+        ))}
+        {m.videoPending && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 320, padding: '12px 14px', border: `1px solid ${color.line}`, borderRadius: radius.md, background: color.paper2, color: color.ink2, fontSize: t.size.sm }}>
+            <Clapperboard size={15} style={{ color: color.accent }} />
+            <span>Rendering video... this runs in the background (~1-2 min) and will appear here automatically.</span>
+            <span style={{ marginLeft: 'auto', width: 9, height: 9, borderRadius: '50%', background: color.accent, animation: 'vera-pulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+          </div>
+        )}
+        {m.carouselPending && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 340, padding: '12px 14px', border: `1px solid ${color.line}`, borderRadius: radius.md, background: color.paper2, color: color.ink2, fontSize: t.size.sm }}>
+            <ImagePlus size={15} style={{ color: color.accent }} />
+            <span>Rendering carousel... {m.carouselPending.done}/{m.carouselPending.total} frames. They land on the draft card as each finishes.</span>
+            <span style={{ marginLeft: 'auto', width: 9, height: 9, borderRadius: '50%', background: color.accent, animation: 'vera-pulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+          </div>
+        )}
+        {(m.content || m.pending) && (
+          m.content
+            ? <Markdown content={m.content} />
+            : <div style={{ fontSize: t.size.lg, lineHeight: 1.62, color: color.ink }}><Dots /></div>
+        )}
+        {/* result actions - Claude-style, under a completed answer */}
+        {m.content && !m.pending && (
+          <div style={{ display: 'flex', gap: 2, marginTop: -2 }}>
+            <button title="Copy as plain text, keeps bold, drops Markdown symbols" style={actBtn}
+              onClick={() => { try { void navigator.clipboard?.writeText(markdownToText(m.content)) } catch { /* ignore */ } setCopied(true); setTimeout(() => setCopied(false), 1500) }}>
+              {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+            </button>
+            {onPin && (
+              <button title="Start a new conversation seeded with this result" style={actBtn}
+                onClick={() => onPin(m.content)}>
+                <Pin size={13} /> Pin to new chat
+              </button>
+            )}
+            <button title="Download as Markdown (text + any video links)" style={actBtn}
+              onClick={() => downloadMarkdown(m.content, m.videos ?? [])}>
+              <FileText size={13} /> .md
+            </button>
+            <button title="Download as PDF: selectable text, images embedded, videos as clickable links" style={actBtn} disabled={pdfBusy}
+              onClick={async () => { setPdfBusy(true); try { const { downloadPdf } = await import('@/lib/exportPdf'); await downloadPdf(m.content, m.images ?? [], m.videos ?? []) } catch { /* ignore */ } finally { setPdfBusy(false) } }}>
+              <FileText size={13} /> {pdfBusy ? 'PDF...' : '.pdf'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// --- right rail: a FULL preview of the post, as it will appear once live --
+// A realistic LinkedIn-style card (author, body, media, reaction bar) so the
+// operator sees the actual post - plus the approve / tweak / regenerate bar.
+function DraftArtifact({ draft, approving, sending, onApprove, onSendForApproval, onCopyShareLink, onTweak, onRegenerate, onBack, versionIdx, versionTotal, onPrevVersion, onNextVersion, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, onAddKey }: {
+  draft: Post; approving: boolean; sending: boolean; onApprove: () => void; onSendForApproval: () => void; onCopyShareLink: () => Promise<void>; onTweak: () => void; onRegenerate: () => void; onBack?: () => void
+  versionIdx: number; versionTotal: number; onPrevVersion?: () => void; onNextVersion?: () => void
+  providerCapabilities: ProviderCapabilities
+  pricingCatalog?: ModelPricingGuide[]
+  pricingSource?: ModelPricingCatalogSource
+  pricingRowCount?: number
+  onAddKey?: () => void
+}) {
+  const isApproved = (draft.status ?? '').toLowerCase() === 'approved'
+  const channel = (draft.channel ?? 'LinkedIn') as string
+  const spec = draftCreativeSpec(draft)
+  const status = draftProductionStatus(draft)
+  const schedule = draftScheduleLabel(draft)
+  const hasMedia = !!draft.media_url || draftMediaFrames(draft).length > 0
+  const [linkCopied, setLinkCopied] = useState(false)
+  const copyShareLink = async () => {
+    if (!draft.id) return
+    try {
+      await onCopyShareLink()
+      setLinkCopied(true); setTimeout(() => setLinkCopied(false), 1800)
+    } catch { /* parent toast handles the send path; copy failure can be retried */ }
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: `${space[5]} ${space[5]} ${space[3]}`, flexShrink: 0, borderBottom: `1px solid ${color.line}`, background: color.paper }}>
+        {onBack && (
+          <button onClick={onBack} title="Back to the campaign calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', fontSize: t.size.cap, fontWeight: t.weight.medium, color: color.ink2, background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.pill, cursor: 'pointer' }}>
+            Calendar
+          </button>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold, color: status.color }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: status.color }} />
+            Production room
+          </span>
+          <div style={{ color: color.ink, fontSize: t.size.sm, fontWeight: t.weight.semibold, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.title || `${channel} draft`}</div>
+        </div>
+        {versionTotal > 1 && versionIdx >= 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: space[2] }}>
+            <button onClick={onPrevVersion} disabled={!onPrevVersion} title="Previous version"
+              style={{ width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color.line}`, borderRadius: radius.sm, background: color.surface, color: onPrevVersion ? color.ink2 : color.faint, cursor: onPrevVersion ? 'pointer' : 'default', fontSize: 14, lineHeight: 1 }}>{'<'}</button>
+            <span style={{ fontSize: t.size.micro, color: color.ghost, fontWeight: t.weight.medium, minWidth: 32, textAlign: 'center' }} title="Draft version, flip back through edits">v{versionIdx + 1}/{versionTotal}</span>
+            <button onClick={onNextVersion} disabled={!onNextVersion} title="Next version"
+              style={{ width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color.line}`, borderRadius: radius.sm, background: color.surface, color: onNextVersion ? color.ink2 : color.faint, cursor: onNextVersion ? 'pointer' : 'default', fontSize: 14, lineHeight: 1 }}>{'>'}</button>
+          </span>
+        )}
+        <div style={{ flex: 1 }} />
+        {!isApproved && draft.id && (
+          <button onClick={onSendForApproval} disabled={sending} title="Put this in the approval queue and open the reviewer's approval page (link copied to share)" style={{ ...btn(color.accent, '#fff', sending), boxShadow: sending ? 'none' : 'var(--shadow-glow)' }}>
+            {sending ? '...' : <><Send size={13} strokeWidth={2.25} /> Send for approval</>}
+          </button>
+        )}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: `${space[4]} ${space[5]} ${space[5]}`, display: 'grid', gap: space[4], alignContent: 'start' }}>
+        <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: space[2], justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.accent, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
+              <Target size={12} />
+              Draft controls
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: status.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color }} />
+              {status.label}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: space[2] }}>
+            <DraftControlTile label="Channel" value={channel} detail={draft.format || 'Post'} />
+            <DraftControlTile label="Spec" value={spec.dimensions} detail={spec.label} />
+            <DraftControlTile label="Schedule" value={schedule.value} detail={schedule.detail} />
+            <DraftControlTile label="Model" value={draft.model_used || 'Not recorded'} detail={hasMedia ? 'Media attached' : 'No media yet'} />
+          </div>
+        </section>
+
+        <section style={{ display: 'grid', gap: space[3] }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
+            <span style={{ color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>Platform preview</span>
+            <span style={{ color: color.ghost, fontSize: t.size.micro }}>{spec.label}</span>
+          </div>
+        <PlatformPostPreview post={draft} density="standard" autoplayMedia />
+        </section>
+
+        <DraftMediaStoryboard draft={draft} spec={spec} />
+
+        <DraftModelPanel
+          capabilities={providerCapabilities}
+          pricingCatalog={pricingCatalog}
+          pricingSource={pricingSource}
+          pricingRowCount={pricingRowCount}
+          onAddKey={onAddKey}
+        />
+
+        <DraftApprovalPath
+          status={status}
+          isApproved={isApproved}
+          hasReviewToken={!!draft.review_token}
+          linkCopied={linkCopied}
+          onCopyShareLink={copyShareLink}
+          onApprove={onApprove}
+          approving={approving}
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: space[2] }}>
+          <button onClick={onTweak} style={{ ...btn(color.paper2, color.ink, false), flex: 1, justifyContent: 'center', border: `1px solid ${color.line}` }}><Pencil size={12} /> Tweak</button>
+          <button onClick={onRegenerate} style={{ ...btn(color.paper2, color.ink, false), flex: 1, justifyContent: 'center', border: `1px solid ${color.line}` }}><RefreshCw size={12} /> Regenerate</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type DraftSpec = { label: string; dimensions: string; aspect: string }
+
+function DraftControlTile({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div style={{ minWidth: 0, background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, padding: space[3] }}>
+      <div style={{ color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.medium, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+      <div style={{ color: color.ghost, fontSize: t.size.micro, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{detail}</div>
+    </div>
+  )
+}
+
+function DraftMediaStoryboard({ draft, spec }: { draft: Post; spec: DraftSpec }) {
+  const frames = draftMediaFrames(draft)
+  const prompt = draftMediaPrompt(draft)
+  if (!draft.media_url && frames.length === 0 && !prompt) {
+    return (
+      <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4] }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space[2], color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold, marginBottom: space[2] }}>
+          <ImagePlus size={12} />
+          Media
+        </div>
+        <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5 }}>
+          No media attached yet. Ask SONA for a platform prompt, carousel, or storyboard before rendering paid media.
+        </p>
+      </section>
+    )
+  }
+  return (
+    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
+          <ImagePlus size={12} />
+          Media and storyboard
+        </span>
+        <span style={{ color: color.ghost, fontSize: t.size.micro }}>{spec.dimensions}</span>
+      </div>
+      {frames.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: space[2] }}>
+          {frames.slice(0, 6).map((frame, index) => (
+            <figure key={`${frame.url}-${index}`} style={{ margin: 0, border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden', background: color.paper2 }}>
+              <img src={frame.url} alt={frame.text || `Storyboard frame ${index + 1}`} style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />
+              <figcaption style={{ padding: space[2], color: color.ghost, fontSize: t.size.micro, lineHeight: 1.35 }}>
+                {frame.text || `Frame ${index + 1}`}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : draft.media_url ? (
+        <div style={{ border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden', background: color.paper2 }}>
+          {draft.media_type === 'video'
+            ? <video src={draft.media_url} controls playsInline style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />
+            : <img src={draft.media_url} alt={draft.title || 'Draft media'} style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />}
+        </div>
+      ) : null}
+      {prompt && (
+        <div style={{ color: color.ink2, fontSize: t.size.micro, lineHeight: 1.45, background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, padding: space[3] }}>
+          {prompt}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function DraftModelPanel({ capabilities, pricingCatalog, pricingSource, pricingRowCount, onAddKey }: {
+  capabilities: ProviderCapabilities
+  pricingCatalog?: ModelPricingGuide[]
+  pricingSource?: ModelPricingCatalogSource
+  pricingRowCount?: number
+  onAddKey?: () => void
+}) {
+  const routes = capabilities.loaded ? modelRouteRecommendations(capabilities, pricingCatalog).slice(0, 3) : []
+  const pricingStatus = pricingCatalogBadge(pricingSource, pricingRowCount)
+  return (
+    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
+          <KeyRound size={12} />
+          Model and spend
+        </span>
+        <span style={{ color: pricingStatus.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{pricingStatus.label}</span>
+      </div>
+      {routes.length > 0 ? (
+        <div style={{ display: 'grid', gap: space[2] }}>
+          {routes.map(route => {
+            const Icon = route.icon
+            const tone = routeToneStyle(route.tone)
+            return (
+              <div key={route.label} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', alignItems: 'center', gap: space[2], padding: space[3], border: `1px solid ${color.line}`, borderRadius: radius.md, background: color.paper2 }}>
+                <Icon size={13} style={{ color: tone.fg }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{route.label}: {route.status}</div>
+                  <div style={{ color: color.ghost, fontSize: t.size.micro, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{route.cost}</div>
+                </div>
+                <span style={{ color: tone.fg, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{route.estimate.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p style={{ margin: 0, color: color.ghost, fontSize: t.size.cap, lineHeight: 1.5 }}>Model routing is loading.</p>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: space[2], flexWrap: 'wrap', color: color.ghost, fontSize: t.size.micro }}>
+        <Lock size={12} style={{ color: color.warn }} />
+        <span>Space keys first. Premium media never defaults.</span>
+        {onAddKey && (
+          <button onClick={onAddKey} style={{ marginLeft: 'auto', padding: '5px 9px', borderRadius: radius.pill, border: `1px solid ${color.line}`, background: color.paper2, color: color.ink2, fontSize: t.size.micro, fontWeight: t.weight.semibold, cursor: 'pointer' }}>
+            Keys
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function DraftApprovalPath({ status, isApproved, hasReviewToken, linkCopied, onCopyShareLink, onApprove, approving }: {
+  status: { label: string; color: string }
+  isApproved: boolean
+  hasReviewToken: boolean
+  linkCopied: boolean
+  onCopyShareLink: () => void
+  onApprove: () => void
+  approving: boolean
+}) {
+  return (
+    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
+          <Check size={12} />
+          Approval path
+        </span>
+        <span style={{ color: status.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{status.label}</span>
+      </div>
+      <div style={{ display: 'grid', gap: space[2] }}>
+        <DraftApprovalStep done label="Draft generated" detail="Ready for review, comments, or model comparison." />
+        <DraftApprovalStep done={hasReviewToken || isApproved} label="Shareable review link" detail={hasReviewToken ? 'Public review token exists.' : 'Generate a link for reviewer access.'} />
+        <DraftApprovalStep done={isApproved} label="Approved for schedule" detail={isApproved ? 'Approved status is saved.' : 'Approve directly or send to the queue.'} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: space[2] }}>
+        <button onClick={onCopyShareLink} title="Copy a public, no-login link to this post for sharing"
+          style={{ ...btn(color.paper2, linkCopied ? color.success : color.ink, false), justifyContent: 'center', border: `1px solid ${linkCopied ? color.success : color.line}` }}>
+          {linkCopied ? <><Check size={12} /> Link copied</> : <><Link2 size={12} /> Review link</>}
+        </button>
+        {!isApproved && (
+          <button onClick={onApprove} disabled={approving} title="Skip the reviewer and approve this yourself"
+            style={{ ...btn(color.paper2, color.ink2, approving), justifyContent: 'center', border: `1px solid ${color.line}` }}>
+            {approving ? '...' : <><Check size={12} /> Approve directly</>}
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function DraftApprovalStep({ done, label, detail }: { done: boolean; label: string; detail: string }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: space[2], alignItems: 'start' }}>
+      <span style={{ width: 18, height: 18, borderRadius: radius.pill, background: done ? color.success : color.paper2, color: done ? '#fff' : color.ghost, border: `1px solid ${done ? color.success : color.line}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+        <Check size={11} />
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold }}>{label}</span>
+        <span style={{ display: 'block', color: color.ghost, fontSize: t.size.micro, lineHeight: 1.4, marginTop: 1 }}>{detail}</span>
+      </span>
+    </div>
+  )
+}
+
+function draftProductionStatus(post: Post) {
+  const status = (post.status ?? '').toLowerCase()
+  if (status.includes('posted')) return { label: 'Posted', color: color.success }
+  if (status.includes('scheduled')) return { label: 'Scheduled', color: color.success }
+  if (status.includes('approved')) return { label: 'Approved', color: color.success }
+  if (status.includes('reject') || status.includes('changes')) return { label: 'Needs changes', color: color.danger }
+  if (status.includes('review') || status.includes('pending')) return { label: 'Pending review', color: color.warn }
+  return { label: 'Draft', color: color.accent }
+}
+
+function draftScheduleLabel(post: Post) {
+  const raw = post.scheduled_at || post.publish_date || post.posted_at || post.published_at
+  if (!raw) return { value: 'Unscheduled', detail: 'Needs a calendar slot' }
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return { value: 'Scheduled', detail: raw }
+  return {
+    value: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    detail: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+  }
+}
+
+function draftCreativeSpec(post: Post): DraftSpec {
+  const descriptor = `${post.channel ?? ''} ${post.format ?? ''} ${post.title ?? ''} ${post.media_type ?? ''}`.toLowerCase()
+  const channel = (post.channel ?? '').toLowerCase()
+  const isVertical = /reel|story|short|tiktok|vertical/.test(descriptor)
+  const isCarousel = post.media_type === 'carousel' || /carousel/.test(descriptor)
+  const isVideo = post.media_type === 'video'
+  if (channel.includes('instagram')) {
+    if (isVertical || isVideo) return { aspect: '9 / 16', dimensions: '1080 x 1920', label: 'Instagram Reel or Story' }
+    if (isCarousel) return { aspect: '1 / 1', dimensions: '1080 x 1080', label: 'Instagram carousel' }
+    return { aspect: '4 / 5', dimensions: '1080 x 1350', label: 'Instagram feed portrait' }
+  }
+  if (channel.includes('youtube') || descriptor.includes('short')) return { aspect: isVertical ? '9 / 16' : '16 / 9', dimensions: isVertical ? '1080 x 1920' : '1920 x 1080', label: isVertical ? 'YouTube Short' : 'YouTube video' }
+  if (channel.includes('linkedin')) return { aspect: isVideo ? '16 / 9' : '1.91 / 1', dimensions: isVideo ? '1920 x 1080' : '1200 x 627', label: isVideo ? 'LinkedIn video' : 'LinkedIn feed image' }
+  if (channel.includes('facebook')) return { aspect: '4 / 5', dimensions: '1080 x 1350', label: 'Facebook feed portrait' }
+  if (channel.includes('medium') || channel.includes('blog')) return { aspect: '16 / 9', dimensions: '1600 x 900', label: 'Article hero image' }
+  if (channel.includes('tiktok')) return { aspect: '9 / 16', dimensions: '1080 x 1920', label: 'TikTok vertical video' }
+  return { aspect: '16 / 9', dimensions: '1200 x 675', label: 'Post media' }
+}
+
+function draftMediaFrames(post: Post): Array<{ url: string; text?: string | null }> {
+  const meta = post.media_metadata as { frames?: Array<{ url?: unknown; text?: unknown }> } | null | undefined
+  if (!Array.isArray(meta?.frames)) return []
+  return meta.frames.filter((frame): frame is { url: string; text?: string | null } => (
+    !!frame &&
+    typeof frame === 'object' &&
+    typeof frame.url === 'string' &&
+    frame.url.length > 0
+  )).map(frame => ({ url: frame.url, text: typeof frame.text === 'string' ? frame.text : null }))
+}
+
+function draftMediaPrompt(post: Post) {
+  const meta = post.media_metadata as { prompt?: unknown; image_prompt?: unknown } | null | undefined
+  if (typeof post.image_prompt === 'string' && post.image_prompt.trim()) return post.image_prompt.trim()
+  if (typeof meta?.prompt === 'string' && meta.prompt.trim()) return meta.prompt.trim()
+  if (typeof meta?.image_prompt === 'string' && meta.image_prompt.trim()) return meta.image_prompt.trim()
+  return ''
+}
+
+function btn(bg: string, fg: string, busy: boolean): React.CSSProperties {
+  return { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', fontSize: t.size.cap, fontWeight: t.weight.medium, borderRadius: radius.sm, border: 'none', cursor: busy ? 'default' : 'pointer', background: bg, color: fg, opacity: busy ? 0.6 : 1 }
+}
+
+// The campaign calendar - the artifact for a plan_campaign batch. A header
+// (name - theme - count) over a dated list of post cards; click one to open it
+// in the draft preview for Approve / Tweak / Regenerate.
+function CampaignArtifact({ campaign, onOpenPost }: {
+  campaign: CampaignData; onOpenPost: (p: CampaignPost) => void
+}) {
+  const fmt = (iso: string | null) => {
+    if (!iso) return { dow: '', md: '' }
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return { dow: '', md: '' }
+    return {
+      dow: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      md: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    }
+  }
+  const posts = [...campaign.posts].sort((a, b) => (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? ''))
+  const channelLabel = campaign.channels?.length ? campaign.channels.join(', ') : campaign.channel
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: `${space[5]} ${space[5]} ${space[3]}`, flexShrink: 0 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: t.weight.semibold, color: color.accent }}>
+          <CalendarDays size={13} /> Campaign - {channelLabel}
+        </div>
+        <h2 style={{ fontSize: t.size.lg, fontWeight: t.weight.semibold, color: color.ink, margin: `${space[2]} 0 2px`, lineHeight: 1.25 }}>{campaign.name}</h2>
+        {campaign.theme && <p style={{ fontSize: t.size.cap, color: color.ink2, margin: 0, lineHeight: 1.45 }}>{campaign.theme}</p>}
+        <p style={{ fontSize: t.size.micro, color: color.ghost, margin: `${space[2]} 0 0` }}>{posts.length} posts - {campaign.cadence} - all pending review</p>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: `0 ${space[5]} ${space[5]}`, display: 'flex', flexDirection: 'column', gap: space[2] }}>
+        {posts.map((p, i) => {
+          const d = fmt(p.scheduled_at)
+          return (
+            <button key={p.id ?? i} onClick={() => onOpenPost(p)}
+              style={{ textAlign: 'left', display: 'flex', gap: space[3], padding: space[3], background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.md, cursor: 'pointer', width: '100%' }}>
+              <div style={{ flexShrink: 0, width: 46, textAlign: 'center' }}>
+                <div style={{ fontSize: t.size.micro, fontWeight: t.weight.semibold, color: color.accent, lineHeight: 1.2 }}>{d.dow}</div>
+                <div style={{ fontSize: t.size.cap, color: color.ink, fontWeight: t.weight.medium }}>{d.md}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, marginBottom: 2 }}>
+                  <div style={{ fontSize: t.size.cap, fontWeight: t.weight.semibold, color: color.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title || `Post ${i + 1}`}</div>
+                  <span style={{ flexShrink: 0, fontSize: '10px', lineHeight: 1, fontWeight: t.weight.semibold, color: color.accent, background: color.accentSoft, border: `1px solid ${color.accentLine}`, borderRadius: radius.pill, padding: '3px 6px' }}>{p.channel}</span>
+                </div>
+                <div style={{ fontSize: t.size.micro, color: color.ink2, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.copy}</div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// --- launcher quick actions (SAM-style) - dynamic, count-aware, send-on-click --
+// Mirrors SAM's welcome actions: each is a complete prompt that RUNS on click
+// (not a fill-the-box starter), and descriptions carry live workspace counts.
+type LaunchAction = { icon: React.ElementType; title: string; sub: string; prompt: string; action?: 'brain' }
+// SAM-clean: a tight, fixed set of six core content jobs. State-aware subtexts,
+// no overflowing grid. Less-common moves (variations, repurpose, hooks-to-post,
+// add-knowledge) are reachable by just typing in the composer.
+function commandStatusBucket(status?: string | null): keyof Omit<CommandStats, 'campaigns'> {
+  const normalized = (status ?? '').trim().toLowerCase()
+  if (normalized.includes('reject')) return 'rejected'
+  if (normalized.includes('post') || normalized.includes('publish') || normalized.includes('live')) return 'posted'
+  if (normalized.includes('sched')) return 'scheduled'
+  if (normalized.includes('approv')) return 'approved'
+  if (normalized.includes('review') || normalized.includes('pending')) return 'pending'
+  return 'draft'
+}
+
+function commandStatsFromPosts(rows: Array<{ status?: string | null }> | null): CommandStats {
+  const stats: CommandStats = { ...EMPTY_COMMAND_STATS }
+  for (const row of rows ?? []) {
+    stats[commandStatusBucket(row.status)] += 1
+  }
+  return stats
+}
+
+function buildLaunchActions(stats: CommandStats): LaunchAction[] {
+  const a: LaunchAction[] = []
+  a.push(stats.campaigns > 0
+    ? { icon: Megaphone, title: 'Improve Campaign', sub: `${stats.campaigns} active campaign${stats.campaigns === 1 ? '' : 's'}`, prompt: "Review this space's active campaigns and suggest the highest-impact improvement to audience, problem, offer, CTA, cadence, and channel mix. Prioritize measurable audience response." }
+    : { icon: Megaphone, title: 'Plan Campaign', sub: 'Audience-led series', prompt: 'Plan a content campaign for this space. Define audience, problem, offer, campaign goal, valid channels, success metric, and draft the first content batch.' })
+  a.push({ icon: PenLine, title: 'Platform Post', sub: 'Channel, hook, CTA', prompt: 'Draft one platform-native post for the best valid channel in this space. Use Brain context to choose the channel, audience, hook, proof angle, CTA, and follow-up signal. Do not default to LinkedIn unless it is a valid strategy channel.' })
+  a.push({ icon: ImagePlus, title: 'Visual Asset', sub: 'Carousel or image', prompt: 'Create a platform-native visual asset for a campaign post. Recommend carousel, infographic, quote card, or custom image, then build the prompt and ask before rendering.' })
+  a.push({ icon: Clapperboard, title: 'Video Storyboard', sub: 'Scenes and cost', prompt: 'Create a storyboard for a short campaign video. Include scene beats, timing, camera notes, caption, model recommendation, and estimated prototype cost. Do not render until I explicitly approve the paid generation.' })
+  a.push({ icon: Zap, title: 'Repurpose Across Channels', sub: 'YT, Medium, Quora, Reddit, X', prompt: 'Turn one core content idea into platform-native versions for LinkedIn, YouTube, Medium, Quora, Reddit, Instagram, Facebook, blog, email, and X where relevant. Keep each version native to the channel and identify which ones should be manual, connected, or read-only.' })
+  a.push(stats.campaigns > 0
+    ? { icon: Lightbulb, title: 'Follow-Up Angles', sub: 'Comments, shares, traffic', prompt: 'Find content topics and engagement signals that deserve follow-up. Turn comments, shares, clicks, and objections into research, reply, or next-content angles.' }
+    : { icon: Lightbulb, title: 'Content Angles', sub: 'Fresh market hooks', prompt: "Give me 5 content angles grounded in this space's offer, audience, customer problems, proof points, and current market conversations." })
+  return a.slice(0, 6)
+}
+
+type ModelRouteRecommendation = {
+  icon: React.ElementType
+  label: string
+  status: string
+  cost: string
+  estimate: SpendEstimate
+  body: string
+  tone: 'success' | 'warn' | 'danger' | 'info'
+}
+
+function modelRouteRecommendations(capabilities: ProviderCapabilities, pricingCatalog?: ModelPricingGuide[]): ModelRouteRecommendation[] {
+  return buildModelRecommendations({
+    textReady: capabilities.textReady,
+    imageReady: capabilities.imageReady,
+    videoReady: capabilities.videoReady,
+    hasOpenRouter: capabilities.hasOpenRouter,
+    hasAnthropic: capabilities.hasAnthropic,
+    hasOpenAI: capabilities.hasOpenAI,
+    hasFal: capabilities.hasFal,
+    imagesEnabled: capabilities.imagesEnabled,
+    standardVideoEnabled: capabilities.standardVideoEnabled,
+    premiumMediaEnabled: capabilities.premiumMediaEnabled,
+    defaultTextModel: capabilities.defaultTextModel,
+    defaultImageModel: capabilities.defaultImageModel,
+    defaultVideoModel: capabilities.defaultVideoModel,
+    defaultImageVideoModel: capabilities.defaultImageVideoModel,
+    monthlyBudgetUsd: capabilities.monthlyBudgetUsd,
+  }, pricingCatalog).map(item => ({
+    icon: item.role === 'Text' ? KeyRound : item.role === 'Image' ? ImagePlus : Clapperboard,
+    label: item.role,
+    status: item.status,
+    cost: item.provider,
+    estimate: item.estimate,
+    body: `${item.reason} ${item.escalation}`,
+    tone: item.tone,
+  }))
+}
+
+function routeToneStyle(tone: ModelRouteRecommendation['tone']) {
+  if (tone === 'success') return { border: color.success, bg: color.surface, fg: color.success }
+  if (tone === 'warn') return { border: color.warn, bg: color.surface, fg: color.warn }
+  if (tone === 'danger') return { border: color.danger, bg: color.surface, fg: color.danger }
+  return { border: color.line, bg: color.surface, fg: color.info }
+}
+
+function pricingCatalogBadge(source: ModelPricingCatalogSource = 'loading', rowCount = 0) {
+  if (source === 'catalog') return { label: `Live catalog, ${rowCount} rows`, color: color.success, border: color.success }
+  if (source === 'fallback') return { label: 'Fallback guide', color: color.warn, border: color.warn }
+  return { label: 'Loading guide', color: color.ghost, border: color.line }
+}
+
+function Idle({ onRun, actions, setup, projectName, onOpenBrain, composer }: {
+  onRun: (prompt: string) => void
+  actions: LaunchAction[]
+  setup: { business: boolean; audience: boolean; voice: boolean; categories: boolean; knowledge: boolean } | null
+  projectName: string
+  onOpenBrain: () => void
+  composer: ReactNode
+}) {
+  const setupDone = !!setup && setup.business && setup.audience && setup.voice && setup.categories && setup.knowledge
+  const setupCard: LaunchAction = { icon: Sparkles, title: `Set up ${projectName}`, sub: 'URL, audience, offer, proof', prompt: '', action: 'brain' }
+  const quickActions = (setup && !setupDone ? [setupCard, ...actions] : actions).slice(0, 4)
+
+  return (
+    <div style={{ minHeight: '100%', padding: `clamp(${space[6]}, 3vw, ${space[8]})`, paddingBottom: space[10], display: 'flex', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 980, display: 'grid', gap: space[5], alignContent: 'start' }}>
+        <section style={{ display: 'flex', alignItems: 'center', gap: space[3] }}>
+          <VeraAvatar size={38} hero />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>Agent</div>
+            <h1 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectName}</h1>
+          </div>
+        </section>
+
+        <section style={{ display: 'grid', gap: space[3] }}>
+          {composer}
+          {quickActions.length > 0 && (
+            <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap', padding: `0 ${space[3]}` }}>
+              {quickActions.map(action => {
+                const Icon = action.icon
+                return (
+                  <button key={action.title} onClick={() => action.action === 'brain' ? onOpenBrain() : onRun(action.prompt)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 34, padding: '8px 11px', borderRadius: radius.pill, border: `1px solid ${color.line}`, background: color.paper2, color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold, cursor: 'pointer' }}>
+                    <Icon size={13} />
+                    {action.title}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+      </div>
+    </div>
+  )
+}
+
+
+
+function VeraAvatar({ size, hero = false }: { size: number; hero?: boolean }) {
+  const [broken, setBroken] = useState(false)
+  const frame: React.CSSProperties = {
+    width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  }
+  if (broken) {
+    return (
+      <span style={{ ...frame, background: color.accent, color: '#fff', fontSize: hero ? 24 : 11, fontWeight: 700 }}>V</span>
+    )
+  }
+  return (
+    <span style={{ ...frame, background: hero ? 'var(--accent-tint)' : color.accent }}>
+      <img src="/vera-avatar.png" alt="Sona" onError={() => setBroken(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
+    </span>
+  )
+}
+
+function Centered({ children }: { children: React.ReactNode }) {
+  return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: t.size.cap, color: color.faint }}>{children}</div>
+}
+function Dots() {
+  return (
+    <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>
+      {[0, 150, 300].map(d => <span key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: color.faint, animation: `vera-pulse 1.2s ease-in-out ${d}ms infinite` }} />)}
+    </span>
+  )
+}
