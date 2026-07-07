@@ -74,6 +74,14 @@ https://supabase-content-eu.innovareai.com/functions/v1/<function-name>
 
 Browser calls use the user session or anon key where allowed. Server-to-server function calls use service-role credentials only inside the Edge Function runtime or server environment.
 
+Edge Functions are deployed to the live self-hosted content stack with:
+
+```bash
+scripts/deploy-function.sh --shared vera-chat vera-orchestrator
+```
+
+The script resolves `supabase-content-eu.innovareai.com`, targets the resolved live IP by default, and refuses a non-live host unless `ALLOW_NON_LIVE_HOST=true` is set explicitly.
+
 ## Product Plan
 
 The current execution plan lives in [docs/VERA_BUILD_PLAN.md](./docs/VERA_BUILD_PLAN.md).
