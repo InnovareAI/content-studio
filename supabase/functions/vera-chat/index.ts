@@ -116,6 +116,10 @@ function approxPromptChars(value: unknown): number {
   return 0
 }
 
+function stripOpenDraftContext(content: string): string {
+  return content.split('\n\n---\n[The draft currently open')[0].trim()
+}
+
 const CAMPAIGN_CHANNELS = [
   'LinkedIn',
   'YouTube',
@@ -4461,10 +4465,10 @@ Deno.serve(async (req) => {
     let userText = ''
     const userAttachments: Array<{ kind: 'image'; url: string; alt?: string }> = []
     if (typeof lastTurn.content === 'string') {
-      userText = lastTurn.content
+      userText = stripOpenDraftContext(lastTurn.content)
     } else if (Array.isArray(lastTurn.content)) {
       for (const block of lastTurn.content) {
-        if (block.type === 'text') userText += block.text
+        if (block.type === 'text') userText += stripOpenDraftContext(block.text)
         else if (block.type === 'image') {
           // Upload the uploaded image to Storage for permanence
           try {

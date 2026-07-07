@@ -293,6 +293,10 @@ function titleFromMessages(messages: Message[]) {
   return (firstUser?.content || firstAny?.content || 'Untitled chat').replace(/\s+/g, ' ').trim()
 }
 
+function stripOpenDraftContext(content: string) {
+  return content.split('\n\n---\n[The draft currently open')[0].trim()
+}
+
 function saveLocalChatMessages(projectId: string, sessionId: string, messages: Message[]) {
   const keep = persistableMessages(messages)
   localStorage.setItem(chatHistoryKey(projectId, sessionId), JSON.stringify(keep))
@@ -316,7 +320,7 @@ function parseStoredMessages(raw: string | null): Message[] {
       .map(m => ({
         id: m.id,
         role: m.role,
-        content: typeof m.content === 'string' ? m.content : '',
+        content: typeof m.content === 'string' ? stripOpenDraftContext(m.content) : '',
         images: Array.isArray(m.images) ? m.images.filter(Boolean) : undefined,
         videos: Array.isArray(m.videos) ? m.videos.filter(Boolean) : undefined,
         files: Array.isArray(m.files) ? m.files.filter(f => f?.name) : undefined,
@@ -368,7 +372,7 @@ function rowToMessage(row: { id: string; role: 'user' | 'assistant'; content: st
   return {
     id: row.id,
     role: row.role,
-    content: row.content ?? '',
+    content: stripOpenDraftContext(row.content ?? ''),
     images: images.length ? images : undefined,
     videos: videos.length ? videos : undefined,
     files: files.length ? files : undefined,
@@ -1497,7 +1501,7 @@ export default function VeraThread() {
   }, [activeProject?.slug, navigate])
 
   // Push the draft artifact into the right rail
-  const draftIdx = draft ? draftHistory.indexOf(draft) : -1
+  const draftIdx = draft ? draftHistory.findIndex(item => item.id === draft.id) : -1
   useRightRail(
     draft ? (
       <DraftArtifact
@@ -1531,8 +1535,8 @@ export default function VeraThread() {
       />
     ) : campaign ? (
       <CampaignArtifact campaign={campaign} onOpenPost={p => { const post = p as unknown as Post; if (post.id && sessionId) { try { localStorage.setItem(`vera-draft:${sessionId}`, post.id) } catch { /* ignore */ } } setDraft(post) }} />
-    ) : <ArtifactEmpty />,
-    [draft?.id, draft?.media_url, draft?.media_metadata, draft?.review_token, draft?.status, approving, sending, campaign?.id, campaign?.posts?.length, draftIdx, draftHistory.length, user?.id, user?.email, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, openProviderKeys],
+    ) : null,
+    [draft, campaign, approving, sending, draftIdx, draftHistory.length, user?.id, user?.email, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, openProviderKeys],
     // Wide, readable artifact panel — this is the working surface, not a
     // skinny sidebar. ~42vw, clamped so it stays sane on small + huge screens.
     'clamp(420px, 42vw, 660px)',
@@ -2151,20 +2155,6 @@ function CampaignArtifact({ campaign, onOpenPost }: {
   )
 }
 
-function ArtifactEmpty() {
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: space[7], gap: space[3] }}>
-      <Sparkles size={22} strokeWidth={1.25} style={{ color: color.ghost }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: space[2] }}>
-        <p style={{ margin: 0, fontSize: t.size.cap, fontWeight: t.weight.semibold, color: color.ink2 }}>No draft yet</p>
-        <p style={{ margin: 0, fontSize: t.size.cap, color: color.ghost, lineHeight: 1.5, maxWidth: '28ch' }}>
-          Drafts Vera creates will appear here for a quick look before they go to review.
-        </p>
-      </div>
-    </div>
-  )
-}
-
 // ─── launcher quick actions (SAM-style) — dynamic, count-aware, send-on-click ──
 // Mirrors SAM's welcome actions: each is a complete prompt that RUNS on click
 // (not a fill-the-box starter), and descriptions carry live workspace counts.
@@ -2279,10 +2269,10 @@ function Idle({ onRun, actions, setup, projectName, onOpenBrain, composer }: {
           </div>
         </section>
 
-        <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[5], boxShadow: 'var(--shadow-pop)', display: 'grid', gap: space[4] }}>
+        <section style={{ display: 'grid', gap: space[3] }}>
           {composer}
           {quickActions.length > 0 && (
-            <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap', padding: `0 ${space[3]}` }}>
               {quickActions.map(action => {
                 const Icon = action.icon
                 return (
