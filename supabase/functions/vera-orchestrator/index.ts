@@ -160,18 +160,25 @@ function jsonError(message: string, status: number): Response {
 const KIMI_MODEL = Deno.env.get('ORCHESTRATOR_MODEL') ?? 'moonshotai/kimi-k2-0905'
 const GLM_MODEL = Deno.env.get('ORCHESTRATOR_REASONING_MODEL') ?? 'z-ai/glm-5.2'
 const FALLBACK_MODEL = Deno.env.get('ORCHESTRATOR_FALLBACK_MODEL') ?? 'anthropic/claude-sonnet-4.6'
-const EMBEDDING_MODEL = 'text-embedding-3-small'
+// text-embedding-3-small via OpenRouter (1536 dim, matches the project_knowledge
+// index). Routing through OpenRouter means a space needs only its OpenRouter key.
+const EMBEDDING_MODEL = 'openai/text-embedding-3-small'
 const EMBEDDING_DIM = 1536
 
-// Embed a query with OpenAI so the strategist can semantically retrieve the
-// client's indexed knowledge. Returns null on any failure (retrieval is then
-// skipped, not fatal).
+// Embed a query through OpenRouter so the strategist can semantically retrieve
+// the client's indexed knowledge. Returns null on any failure (retrieval is
+// then skipped, not fatal).
 async function embedQuery(text: string, key: string): Promise<number[] | null> {
   const input = text.length > 28_000 ? text.slice(0, 28_000) : text
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
+    const res = await fetch('https://openrouter.ai/api/v1/embeddings', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://vera.innovareai.com',
+        'X-Title': 'VERA Orchestrator',
+      },
       body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
     })
     if (!res.ok) return null
@@ -187,10 +194,10 @@ async function retrieveKnowledge(
   supabase: AdminClient,
   projectId: string,
   query: string,
-  openaiKey: string | null,
+  openRouterKey: string | null,
 ): Promise<Array<{ title: string; excerpt: string }>> {
-  if (!openaiKey || query.trim().length < 8) return []
-  const embedding = await embedQuery(query, openaiKey)
+  if (!openRouterKey || query.trim().length < 8) return []
+  const embedding = await embedQuery(query, openRouterKey)
   if (!embedding) return []
   try {
     const { data, error } = await (supabase as unknown as {
@@ -453,8 +460,7 @@ ${clientInstructions.slice(0, 6000)}` : ''
         // Client knowledge base — semantically retrieve the indexed documents and
         // sources most relevant to this brief, so the reasoning model absorbs the
         // real source material, not just the business-context summary.
-        const embedKey = (await loadClientApiKey(supabase, project_id, ['openai']))?.key ?? Deno.env.get('OPENAI_API_KEY') ?? null
-        const knowledgeHits = await retrieveKnowledge(supabase, project_id, prompt, embedKey)
+        const knowledgeHits = await retrieveKnowledge(supabase, project_id, prompt, orKey)
         const knowledgeContext = knowledgeHits.length ? `
 
 CLIENT KNOWLEDGE — excerpts from ${projectRow?.name ?? 'the client'}'s indexed documents and sources, retrieved as most relevant to this brief. Treat these as source material. Ground proof points and claims in these excerpts and cite specifics from them rather than inventing figures.
