@@ -42,6 +42,20 @@ export default function ClientKeys() {
   const [config, setConfig] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Per-space model choices, stored in projects.ai_policy. Text and reasoning
+  // are OpenRouter slugs; image is an image-model alias.
+  const [textModel, setTextModel] = useState('')
+  const [reasoningModel, setReasoningModel] = useState('')
+  const [imageModel, setImageModel] = useState('')
+  const [savingModels, setSavingModels] = useState(false)
+
+  useEffect(() => {
+    const ap = (activeProject?.ai_policy ?? {}) as Record<string, unknown>
+    setTextModel((ap.default_text_model as string) ?? '')
+    setReasoningModel((ap.default_reasoning_model as string) ?? '')
+    setImageModel((ap.default_image_model as string) ?? '')
+  }, [activeProject?.id, activeProject?.ai_policy])
+
   const load = useCallback(async () => {
     if (!activeProject?.id) { setKeys([]); setLoading(false); return }
     setLoading(true)
@@ -99,6 +113,22 @@ export default function ClientKeys() {
     await load()
   }
 
+  async function saveModels() {
+    if (!activeProject?.id) return
+    setSavingModels(true)
+    const ap = (activeProject.ai_policy ?? {}) as Record<string, unknown>
+    const next = {
+      ...ap,
+      default_text_model: textModel.trim() || null,
+      default_reasoning_model: reasoningModel.trim() || null,
+      default_image_model: imageModel.trim() || 'nano-banana',
+    }
+    const { error } = await supabase.from('projects').update({ ai_policy: next }).eq('id', activeProject.id)
+    setSavingModels(false)
+    if (error) { push({ kind: 'danger', title: 'Could not save models', body: error.message }); return }
+    push({ kind: 'success', title: 'Models saved', body: 'VERA uses these from the next generation.' })
+  }
+
   if (!activeProject) return null
   const active = keys.filter(k => k.status === 'active')
 
@@ -109,9 +139,34 @@ export default function ClientKeys() {
     <div style={{ padding: `${space[8]} ${space[8]} ${space[10]}`, maxWidth: 820 }}>
       <PageHeader
         eyebrow={activeProject.name}
-        title="API keys"
-        subtitle="Connect this space to its own AI provider keys. Keys are stored encrypted and used only for this space. OpenRouter covers text and supported image models. OpenAI covers searchable knowledge embeddings. FAL is required for space-owned video generation. Model defaults and the generation budget live in Settings → Brain & Models."
+        title="Keys and models"
+        subtitle="Connect this space to its own provider keys and pick the models it runs on. Keys are stored encrypted and used only for this space. Text and reasoning run on the space OpenRouter key; image and video run on FAL or OpenRouter. The generation budget lives in Settings → Brain & Models."
       />
+
+      <section style={{ marginBottom: space[8] }}>
+        <SectionLabel style={{ marginBottom: space[3] }}>Models</SectionLabel>
+        <div style={card}>
+          <div style={{ display: 'grid', gap: space[4] }}>
+            <Field label="Creative model (text)" helper="OpenRouter slug for writing. Runs on the space OpenRouter key.">
+              <Input value={textModel} onChange={e => setTextModel(e.target.value)} placeholder="moonshotai/kimi-k2-0905" />
+            </Field>
+            <Field label="Reasoning model" helper="OpenRouter slug for planning and evaluation. Runs on the space OpenRouter key.">
+              <Input value={reasoningModel} onChange={e => setReasoningModel(e.target.value)} placeholder="z-ai/glm-5.2" />
+            </Field>
+            <Field label="Image model" helper="Image alias, for example imagen-4, nano-banana-pro, or nano-banana.">
+              <Input value={imageModel} onChange={e => setImageModel(e.target.value)} placeholder="imagen-4" />
+            </Field>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: space[4] }}>
+            <Button variant="primary" onClick={saveModels} disabled={savingModels}>
+              {savingModels ? 'Saving' : 'Save models'}
+            </Button>
+          </div>
+          <p style={{ fontSize: t.size.micro, color: color.faint, margin: `${space[3]} 0 0`, lineHeight: 1.5 }}>
+            Leave a field blank to use the pipeline default: Kimi for creative, GLM for reasoning, Nano Banana for image.
+          </p>
+        </div>
+      </section>
 
       <section style={{ marginBottom: space[8] }}>
         <SectionLabel style={{ marginBottom: space[3] }}>Add a key</SectionLabel>

@@ -152,10 +152,13 @@ function jsonError(message: string, status: number): Response {
   })
 }
 
-// The writing pipeline runs on Kimi (cheap, holds brand voice across clients)
-// via OpenRouter, with a Claude fallback so a stage never returns blank. Both
-// slugs are overridable via env.
+// The pipeline runs on two OpenRouter models chosen per space: a creative model
+// for the writing stages (Kimi by default) and a reasoning model for the
+// planning and evaluation stages (GLM by default). A Claude fallback covers any
+// empty or errored stage. Per-space slugs come from the space AI policy; these
+// are the fallbacks when a space has not set its own.
 const KIMI_MODEL = Deno.env.get('ORCHESTRATOR_MODEL') ?? 'moonshotai/kimi-k2-0905'
+const GLM_MODEL = Deno.env.get('ORCHESTRATOR_REASONING_MODEL') ?? 'z-ai/glm-5.2'
 const FALLBACK_MODEL = Deno.env.get('ORCHESTRATOR_FALLBACK_MODEL') ?? 'anthropic/claude-sonnet-4.6'
 
 // Stream one pipeline stage through OpenRouter's OpenAI-compatible SSE endpoint.
@@ -165,6 +168,7 @@ const FALLBACK_MODEL = Deno.env.get('ORCHESTRATOR_FALLBACK_MODEL') ?? 'anthropic
 // anthropic.messages.stream() loop the callers relied on.
 async function streamStage(opts: {
   key: string
+  model: string
   maxTokens: number
   temperature: number
   system: string
@@ -223,7 +227,7 @@ async function streamStage(opts: {
   }
 
   try {
-    const primary = await run(KIMI_MODEL)
+    const primary = await run(opts.model)
     if (primary.trim()) return primary
   } catch { /* fall through to the Claude fallback */ }
   const fallback = await run(FALLBACK_MODEL)
@@ -277,6 +281,10 @@ Deno.serve(async (req) => {
   }
   const orKey = runtime.openRouterKey
   const researchOpenRouterKey = runtime.openRouterKey
+  // Per-space model choices: creative model writes, reasoning model plans and
+  // evaluates. Fall back to the pipeline defaults when a space has not set one.
+  const creativeModel = aiPolicy.defaultTextModel?.trim() || KIMI_MODEL
+  const reasoningModel = aiPolicy.defaultReasoningModel?.trim() || GLM_MODEL
 
   const encoder = new TextEncoder()
 
@@ -380,6 +388,7 @@ This is not "a VP of Sales" — it is THIS VP of Sales with THESE pains. Referen
 
         strategyRaw = await streamStage({
           key: orKey,
+          model: reasoningModel,
           maxTokens: 1600,
           temperature: 0.3,
           jsonMode: true,
@@ -481,6 +490,7 @@ When run_image_designer is true, populate image_prompt with a concrete 1-2 sente
 
         writerText = await streamStage({
           key: orKey,
+          model: creativeModel,
           maxTokens: 2048,
           temperature: 0.7,
           system: `You are VERA's Writer. Write the content based on the strategy brief below.
@@ -517,6 +527,7 @@ Write only the final content — no preamble, no explanation, no labels, no mark
         if (strategy.run_seo && strategy.target_keywords) {
           const seoText = await streamStage({
             key: orKey,
+            model: creativeModel,
             maxTokens: 1024,
             temperature: 0.4,
             system: `You are VERA's SEO Agent. Optimise the given content for search engines while preserving its voice and quality.
@@ -548,6 +559,7 @@ SEO NOTES:
         if (strategy.run_persona_adapter && strategy.persona_detail) {
           const personaText = await streamStage({
             key: orKey,
+            model: creativeModel,
             maxTokens: 1024,
             temperature: 0.7,
             system: `You are VERA's Persona Adapter. Rewrite the given content to resonate specifically with the target persona described below. Adjust language, examples, pain points, and benefits to match their world — while keeping the core message and length.
@@ -639,6 +651,7 @@ Output the rewritten content only — no labels, no explanation.`,
 
         const brandText = await streamStage({
           key: orKey,
+          model: reasoningModel,
           maxTokens: 512,
           temperature: 0.3,
           system: `You are VERA's Brand Guard. Review the content against brand guidelines.
@@ -658,6 +671,7 @@ Respond concisely:
         // ── STEP 9: COMPLIANCE CHECKER (always) ───────────────────────────────
         const complianceText = await streamStage({
           key: orKey,
+          model: reasoningModel,
           maxTokens: 512,
           temperature: 0.2,
           system: `You are VERA's Compliance Checker. Review the content for the following compliance issues:
@@ -727,7 +741,7 @@ followed by a summary of what must be fixed.`,
             format: formatLabel,
             hashtags,
             status: postStatus,
-            model_used: KIMI_MODEL,
+            model_used: creativeModel,
             media_url: generatedImageUrl,
             media_type: generatedImageUrl ? 'image' : null,
             media_metadata: (generatedImageUrl ? { image_prompt: String(strategy.image_prompt ?? ''), model: aiPolicy.defaultImageModel } : {}) as Json,

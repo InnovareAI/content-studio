@@ -11,6 +11,7 @@ export type ProjectAiPolicy = {
   budgetGuardMode: "warn" | "enforce"
   monthlyBudgetUsd: number | null
   defaultTextModel: string | null
+  defaultReasoningModel: string | null
   defaultImageModel: string
   defaultVideoModel: string
   defaultImageVideoModel: string
@@ -25,6 +26,7 @@ export const DEFAULT_AI_POLICY: ProjectAiPolicy = {
   budgetGuardMode: "warn",
   monthlyBudgetUsd: null,
   defaultTextModel: null,
+  defaultReasoningModel: null,
   defaultImageModel: "nano-banana",
   defaultVideoModel: "hailuo",
   defaultImageVideoModel: "hailuo-i2v",
@@ -55,6 +57,7 @@ export function parseProjectAiPolicy(value: Json | null | undefined): ProjectAiP
     budgetGuardMode: budgetGuardModeValue(policy.budget_guard_mode),
     monthlyBudgetUsd: positiveNumberValue(policy.monthly_budget_usd),
     defaultTextModel: stringValue(policy.default_text_model, DEFAULT_AI_POLICY.defaultTextModel),
+    defaultReasoningModel: stringValue(policy.default_reasoning_model, DEFAULT_AI_POLICY.defaultReasoningModel),
     defaultImageModel: stringValue(policy.default_image_model, DEFAULT_AI_POLICY.defaultImageModel) ?? DEFAULT_AI_POLICY.defaultImageModel,
     defaultVideoModel: stringValue(policy.default_video_model, DEFAULT_AI_POLICY.defaultVideoModel) ?? DEFAULT_AI_POLICY.defaultVideoModel,
     defaultImageVideoModel: stringValue(policy.default_image_video_model, DEFAULT_AI_POLICY.defaultImageVideoModel) ?? DEFAULT_AI_POLICY.defaultImageVideoModel,
