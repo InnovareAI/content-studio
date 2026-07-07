@@ -19,7 +19,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'workspace',    label: 'Workspace',    icon: Building2 },
   { id: 'team',         label: 'Access',       icon: Users },
   { id: 'integrations', label: 'Integrations', icon: Plug },
-  { id: 'brain',        label: 'Brain & Models', icon: Brain },
+  { id: 'brain',        label: 'Models & budget', icon: Brain },
   { id: 'usage',        label: 'Generation Usage', icon: BarChart3 },
 ]
 

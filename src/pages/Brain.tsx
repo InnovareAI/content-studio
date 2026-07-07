@@ -286,7 +286,7 @@ function cleanAuditSkillProposals(raw: unknown): AuditSkillProposal[] {
       const name = cleanText(source.name)
       const description = cleanMultilineText(source.description)
       const promptModule = cleanMultilineText(source.prompt_module) || [
-        `Apply this Brain skill: ${name || 'Space-specific content skill'}.`,
+        `Apply this Playbook skill: ${name || 'Space-specific content skill'}.`,
         description || 'Use the client audit evidence to improve content quality, platform fit, and campaign performance.',
       ].join('\n')
       return {
@@ -971,7 +971,7 @@ function BrainSubMenu({
     { id: 'knowledge', icon: BookOpen, label: 'Knowledge', meta: `${indexedCount} indexed` },
   ]
   return (
-    <nav aria-label="Brain sections" style={{ position: 'sticky', top: space[4], display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <nav aria-label="Playbook sections" style={{ position: 'sticky', top: space[4], display: 'flex', flexDirection: 'column', gap: 2 }}>
       {items.map(item => {
         const Icon = item.icon
         const on = active === item.id
@@ -1424,7 +1424,7 @@ export default function Brain() {
       const indexedCount = (knowledge?.stored ?? 0) + (knowledge?.updated ?? 0) - (knowledge?.unindexed ?? 0)
       const rawCount = knowledge?.unindexed ?? 0
       const knowledgePart = knowledge
-        ? ` Brain: ${Math.max(0, indexedCount)} indexed${rawCount ? `, ${rawCount} raw` : ''}${knowledge.failed ? `, ${knowledge.failed} failed` : ''}.`
+        ? ` Playbook: ${Math.max(0, indexedCount)} indexed${rawCount ? `, ${rawCount} raw` : ''}${knowledge.failed ? `, ${knowledge.failed} failed` : ''}.`
         : ''
       setSourceStatus(`${depthLabel} pull: ${okCount}/${total} sources, ${itemPart}.${knowledgePart} Review and save.`)
       void loadSourceKnowledge()
@@ -1535,9 +1535,9 @@ export default function Brain() {
       gotchas: [],
       good_examples: [],
       bad_examples: [],
-      source_refs: [{ label: 'Brain audit', text: 'Drafted from space source audit.' }],
+      source_refs: [{ label: 'Playbook audit', text: 'Drafted from space source audit.' }],
       confidence: 'medium',
-      performance_notes: 'Created from Brain audit proposal. Validate against future content outcomes.',
+      performance_notes: 'Created from Playbook audit proposal. Validate against future content outcomes.',
       tags: ['strategy-brain', 'audit-proposal'],
       is_system: false,
       is_active: true,
@@ -1555,7 +1555,7 @@ export default function Brain() {
   async function runDraft() {
     if (!activeOrg?.id || !activeProject?.id || drafting) return
     if (!session?.access_token) {
-      setDraftStatus('Sign in again before drafting the Strategy Brain.')
+      setDraftStatus('Sign in again before drafting the Playbook.')
       return
     }
     setDrafting(true); setDraftStatus("Reading this space's content...")
@@ -1581,7 +1581,7 @@ export default function Brain() {
           let ev: { event?: string; message?: string; proposal?: { brand_voice?: Record<string, string[] | string>; business_context?: unknown; personas?: unknown[]; skills?: unknown[] } }
           try { ev = JSON.parse(json) } catch { continue }
           if (ev.event === 'started' || ev.event === 'fetching') setDraftStatus("Reading this space's content...")
-          else if (ev.event === 'synthesising') setDraftStatus('Drafting the Strategy Brain...')
+          else if (ev.event === 'synthesising') setDraftStatus('Drafting the Playbook...')
           else if (ev.event === 'done') {
             const v = ev.proposal?.brand_voice ?? {}
             const contextPatch = normalizeAuditBusinessContext(ev.proposal?.business_context)
@@ -1601,13 +1601,13 @@ export default function Brain() {
             setDraftAudienceProposals(audienceProposals)
             setDraftSkillProposals(skillProposals)
             setBvInherited(false)
-            setDraftStatus(`Drafted from this space's content. Review the Strategy Brain and Save.${contextCount ? ` ${contextCount} strategy field${contextCount === 1 ? '' : 's'} updated.` : ''}${n ? ` ${n} audience proposal${n === 1 ? '' : 's'} ready.` : ''}${skillCount ? ` ${skillCount} skill proposal${skillCount === 1 ? '' : 's'} ready.` : ''}`)
+            setDraftStatus(`Drafted from this space's content. Review the Playbook and Save.${contextCount ? ` ${contextCount} strategy field${contextCount === 1 ? '' : 's'} updated.` : ''}${n ? ` ${n} audience proposal${n === 1 ? '' : 's'} ready.` : ''}${skillCount ? ` ${skillCount} skill proposal${skillCount === 1 ? '' : 's'} ready.` : ''}`)
           }
           else if (ev.event === 'error') throw new Error(ev.message ?? 'audit failed')
         }
       }
     } catch (e) {
-      setDraftStatus(`Couldn't draft automatically (${(e as Error).message}). You can still fill the brain by hand below.`)
+      setDraftStatus(`Couldn't draft automatically (${(e as Error).message}). You can still fill the Playbook by hand below.`)
     } finally {
       setDrafting(false)
     }
@@ -1646,7 +1646,7 @@ export default function Brain() {
   }
 
   if (!activeProject) {
-    return <div style={{ padding: space[8], maxWidth: 760 }}><EmptyState icon={<BrainIcon size={22} strokeWidth={1.5} />} title="No active project" body="Pick a space in the left rail to set its brain: instructions, voice, audiences." /></div>
+    return <div style={{ padding: space[8], maxWidth: 760 }}><EmptyState icon={<BrainIcon size={22} strokeWidth={1.5} />} title="No active project" body="Pick a space in the left rail to set its playbook: instructions, voice, audiences." /></div>
   }
 
   const sourceCount = DEMAND_SOURCE_KEYS

@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
-  MessageSquare, CheckSquare, Brain,
+  MessageSquare, CheckSquare, BookOpen,
   BarChart3, TrendingUp, Zap, Settings, LogOut, ChevronsUpDown, Check, LayoutGrid, CalendarDays, Library, Plus, Clock, ChevronRight, ChevronLeft, KeyRound,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
@@ -326,7 +326,7 @@ function NewClientModal({ onClose }: { onClose: () => void }) {
       <div onClick={e => e.stopPropagation()}
         style={{ width: 'min(560px, 94vw)', maxHeight: '88vh', overflowY: 'auto', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-modal)', padding: 22 }}>
         <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', margin: '0 0 4px' }}>New space</h2>
-        <p style={{ fontSize: 12.5, color: 'var(--ink-2)', margin: '0 0 16px', lineHeight: 1.5 }}>A sub-workspace under {activeOrg?.name ?? 'your workspace'} with its own brain, content, and calendar.</p>
+        <p style={{ fontSize: 12.5, color: 'var(--ink-2)', margin: '0 0 16px', lineHeight: 1.5 }}>A sub-workspace under {activeOrg?.name ?? 'your workspace'} with its own playbook, content, and calendar.</p>
         <label style={labelStyle}>Company URL</label>
         <input autoFocus value={context.website} onChange={e => updateContext('website', e.target.value)} placeholder="https://company.com"
           onKeyDown={e => { if (e.key === 'Enter') create() }} style={{ ...inputStyle, marginBottom: 12 }} />
@@ -496,13 +496,12 @@ export default function Layout() {
           <span className="flex-1 truncate text-left">New session</span>
         </button>
 
-        {/* Primary nav ordered by the content loop so the rail teaches the
-            sequence: set up the brain, create with the agent, review, schedule,
-            organize. Stage tags give a felt order instead of flat peers. */}
+        {/* Primary nav is the daily content loop: create, review, schedule,
+            organize. Setup surfaces (Playbook, Integrations) live below the
+            loop, not in it, since they are configured once, not touched daily. */}
         <nav className="pt-1 space-y-0.5">
           <RailLabel>Workflow</RailLabel>
           {/* Desk (p('blueprint')) hidden from the rail; still reachable by URL. */}
-          <RailItem to={p('brain')}     icon={Brain}           label="Brain"   tag="set up" />
           <RailItem to={p('vera')}      icon={MessageSquare}   label="Agent"   tag="create" onClick={() => window.dispatchEvent(new CustomEvent('vera:home'))} />
           <RailItem to={p('review')}    icon={CheckSquare}     label="Review"  badge={pendingCount} />
           <RailItem to={p('calendar')}  icon={CalendarDays}    label="Planner" tag="schedule" />
@@ -521,6 +520,7 @@ export default function Layout() {
         {/* Utility group — mirrors SAM's AI Settings · Settings · user. */}
         {/* Settings opens as a modal (SAM pattern), not a page nav. */}
         <nav className="space-y-0.5 pb-1">
+          <RailItem to={p('brain')} icon={BookOpen} label="Playbook" />
           <RailItem to="/skills" icon={Zap} label="AI Settings" />
           <button
             onClick={() => setSettingsOpen(true)}
