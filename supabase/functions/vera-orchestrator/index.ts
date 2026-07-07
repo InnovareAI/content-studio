@@ -160,6 +160,53 @@ function jsonError(message: string, status: number): Response {
 const KIMI_MODEL = Deno.env.get('ORCHESTRATOR_MODEL') ?? 'moonshotai/kimi-k2-0905'
 const GLM_MODEL = Deno.env.get('ORCHESTRATOR_REASONING_MODEL') ?? 'z-ai/glm-5.2'
 const FALLBACK_MODEL = Deno.env.get('ORCHESTRATOR_FALLBACK_MODEL') ?? 'anthropic/claude-sonnet-4.6'
+const EMBEDDING_MODEL = 'text-embedding-3-small'
+const EMBEDDING_DIM = 1536
+
+// Embed a query with OpenAI so the strategist can semantically retrieve the
+// client's indexed knowledge. Returns null on any failure (retrieval is then
+// skipped, not fatal).
+async function embedQuery(text: string, key: string): Promise<number[] | null> {
+  const input = text.length > 28_000 ? text.slice(0, 28_000) : text
+  try {
+    const res = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: EMBEDDING_MODEL, input }),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { data?: Array<{ embedding: number[] }> }
+    const v = data.data?.[0]?.embedding
+    return v && v.length === EMBEDDING_DIM ? v : null
+  } catch { return null }
+}
+
+// Semantic search over the client's indexed documents and sources
+// (project_knowledge, pgvector). Same match function vera-chat uses.
+async function retrieveKnowledge(
+  supabase: AdminClient,
+  projectId: string,
+  query: string,
+  openaiKey: string | null,
+): Promise<Array<{ title: string; excerpt: string }>> {
+  if (!openaiKey || query.trim().length < 8) return []
+  const embedding = await embedQuery(query, openaiKey)
+  if (!embedding) return []
+  try {
+    const { data, error } = await (supabase as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>
+    }).rpc('project_knowledge_search', {
+      p_project_id: projectId,
+      p_embedding: embedding,
+      p_match_count: 5,
+      p_threshold: 0.5,
+    })
+    if (error) return []
+    return ((data ?? []) as Array<{ title: string; excerpt: string }>)
+      .map(h => ({ title: h.title, excerpt: h.excerpt }))
+      .filter(h => h.excerpt)
+  } catch { return [] }
+}
 
 // Stream one pipeline stage through OpenRouter's OpenAI-compatible SSE endpoint.
 // Primary is Kimi; on an empty completion or a transport error it retries once
@@ -403,6 +450,16 @@ CLIENT BRAIN — absorb this before planning. This is what VERA knows about ${pr
 
 ${clientInstructions.slice(0, 6000)}` : ''
 
+        // Client knowledge base — semantically retrieve the indexed documents and
+        // sources most relevant to this brief, so the reasoning model absorbs the
+        // real source material, not just the business-context summary.
+        const embedKey = (await loadClientApiKey(supabase, project_id, ['openai']))?.key ?? Deno.env.get('OPENAI_API_KEY') ?? null
+        const knowledgeHits = await retrieveKnowledge(supabase, project_id, prompt, embedKey)
+        const knowledgeContext = knowledgeHits.length ? `
+
+CLIENT KNOWLEDGE — excerpts from ${projectRow?.name ?? 'the client'}'s indexed documents and sources, retrieved as most relevant to this brief. Treat these as source material. Ground proof points and claims in these excerpts and cite specifics from them rather than inventing figures.
+${knowledgeHits.map((h, i) => `[${i + 1}] ${h.title}: ${h.excerpt.slice(0, 800)}`).join('\n\n')}` : ''
+
         strategyRaw = await streamStage({
           key: orKey,
           model: reasoningModel,
@@ -410,7 +467,7 @@ ${clientInstructions.slice(0, 6000)}` : ''
           temperature: 0.3,
           jsonMode: true,
           system: `You are VERA's Strategist. Analyse the content brief and output a strategy as valid JSON only — no prose, no markdown fences.
-${clientContext}${campaignContext}${audienceContext}
+${clientContext}${knowledgeContext}${campaignContext}${audienceContext}
 
 ${VERA_MARKETING_EXPERTISE}
 
