@@ -32,14 +32,16 @@ import {
 // SAM treatment: icon + label, generous padding. Active = solid coral fill
 // with white text/icon (the screenshot's "Sam" item). Inactive = quiet gray.
 function RailItem({
-  to, icon: Icon, label, badge, onClick, soon, tag,
-}: { to: string; icon: React.ElementType; label: string; badge?: number; onClick?: () => void; soon?: boolean; tag?: string }) {
+  to, icon: Icon, label, badge, onClick, soon, tag, collapsed,
+}: { to: string; icon: React.ElementType; label: string; badge?: number; onClick?: () => void; soon?: boolean; tag?: string; collapsed?: boolean }) {
   return (
     <NavLink
       to={to}
       end={to === '/dashboard'}
       onClick={onClick}
-      className="flex items-center gap-2 px-2.5 py-1.5 mx-2 transition-colors"
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      className={`relative flex items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-2.5'} py-1.5 mx-2 transition-colors`}
       style={({ isActive }) => ({
         background: isActive ? 'var(--surface)' : 'transparent',
         color: isActive ? 'var(--ink)' : 'var(--ink-quiet)',
@@ -54,40 +56,48 @@ function RailItem({
         <>
           <Icon size={16} strokeWidth={isActive ? 2.1 : 1.75}
             style={{ color: isActive ? 'var(--accent)' : 'var(--ghost)', flexShrink: 0 }} />
-          <span className="flex-1 truncate">{label}</span>
-          {soon ? (
-            <span
-              className="text-[10px] px-1.5 leading-tight py-px uppercase"
-              style={{
-                background: 'rgba(0,0,0,0.06)',
-                color: 'var(--ghost)',
-                borderRadius: 'var(--radius-sm)',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-              }}
-            >
-              Soon
-            </span>
-          ) : typeof badge === 'number' && badge > 0 ? (
-            <span
-              className="text-[11px] px-1.5 leading-tight py-px"
-              style={{
-                background: 'var(--accent-tint)',
-                color: 'var(--accent)',
-                borderRadius: 'var(--radius-sm)',
-                fontWeight: 600,
-              }}
-            >
-              {badge}
-            </span>
-          ) : tag ? (
-            <span
-              className="text-[10px]"
-              style={{ color: isActive ? 'var(--accent)' : 'var(--ghost)', fontWeight: isActive ? 600 : 500 }}
-            >
-              {tag}
-            </span>
-          ) : null}
+          {collapsed ? (
+            typeof badge === 'number' && badge > 0 ? (
+              <span aria-hidden style={{ position: 'absolute', top: 5, right: 8, width: 6, height: 6, borderRadius: 999, background: 'var(--accent)' }} />
+            ) : null
+          ) : (
+            <>
+              <span className="flex-1 truncate">{label}</span>
+              {soon ? (
+                <span
+                  className="text-[10px] px-1.5 leading-tight py-px uppercase"
+                  style={{
+                    background: 'rgba(0,0,0,0.06)',
+                    color: 'var(--ghost)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Soon
+                </span>
+              ) : typeof badge === 'number' && badge > 0 ? (
+                <span
+                  className="text-[11px] px-1.5 leading-tight py-px"
+                  style={{
+                    background: 'var(--accent-tint)',
+                    color: 'var(--accent)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {badge}
+                </span>
+              ) : tag ? (
+                <span
+                  className="text-[10px]"
+                  style={{ color: isActive ? 'var(--accent)' : 'var(--ghost)', fontWeight: isActive ? 600 : 500 }}
+                >
+                  {tag}
+                </span>
+              ) : null}
+            </>
+          )}
         </>
       )}
     </NavLink>
@@ -105,6 +115,12 @@ function RailLabel({ children }: { children: string }) {
   return (
     <div style={{ padding: '10px 14px 3px', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ghost)' }}>{children}</div>
   )
+}
+
+// Group separator used in the collapsed (icons-only) rail, where the uppercase
+// group labels are hidden — keeps a felt break between the nav clusters.
+function RailDivider() {
+  return <div style={{ height: 1, background: 'var(--paper-edge)', margin: '8px 12px' }} />
 }
 
 // Recents — the active client's past chats, surfaced in the rail (tester
@@ -152,7 +168,7 @@ function mergeRailSessions(remote: RailSession[], local: RailSession[]) {
   return Array.from(byId.values()).sort((a, b) => b.last_at.localeCompare(a.last_at)).slice(0, 5)
 }
 
-function RailRecents() {
+function RailRecents({ collapsed }: { collapsed?: boolean }) {
   const { activeProject } = useProject()
   const navigate = useNavigate()
   const location = useLocation()
@@ -181,7 +197,9 @@ function RailRecents() {
     return () => { cancelled = true; window.removeEventListener('vera:home', load); window.removeEventListener('vera:session', load) }
   }, [activeProject?.id])
 
-  if (!activeProject) return null
+  // Recents are inherently text; there is nothing meaningful to show as an icon,
+  // so the collapsed rail simply hides them.
+  if (!activeProject || collapsed) return null
 
   const open = (sid: string) => {
     const target = `/p/${activeProject.slug}/vera`
@@ -208,7 +226,7 @@ function RailRecents() {
   )
 }
 
-function ClientSwitcher() {
+function ClientSwitcher({ collapsed }: { collapsed?: boolean }) {
   const { activeProject, projects, switchProject } = useProject()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -217,17 +235,24 @@ function ClientSwitcher() {
   const glyph = (s: string) => (s.trim()[0] ?? 'C').toUpperCase()
 
   return (
-    <div style={{ position: 'relative', padding: '12px 8px 4px' }}>
-      <button onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)', background: 'var(--surface)', cursor: 'pointer' }}>
-        <span style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{glyph(name)}</span>
-        <span style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-        <ChevronsUpDown size={14} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
-      </button>
+    <div style={{ position: 'relative', padding: collapsed ? '12px 0 4px' : '12px 8px 4px' }}>
+      {collapsed ? (
+        <button onClick={() => setOpen(o => !o)} title={name} aria-label={`Space: ${name}. Switch space`}
+          style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '5px 0', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+          <span style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{glyph(name)}</span>
+        </button>
+      ) : (
+        <button onClick={() => setOpen(o => !o)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)', background: 'var(--surface)', cursor: 'pointer' }}>
+          <span style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{glyph(name)}</span>
+          <span style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+          <ChevronsUpDown size={14} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
+        </button>
+      )}
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', left: 8, right: 8, top: '100%', marginTop: 4, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-pop)', padding: 4, maxHeight: 380, overflowY: 'auto' }}>
+          <div style={{ position: 'absolute', ...(collapsed ? { left: 8, width: 236 } : { left: 8, right: 8 }), top: '100%', marginTop: 4, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-pop)', padding: 4, maxHeight: 380, overflowY: 'auto' }}>
             {projects.map(p => {
               const active = p.id === activeProject?.id
               return (
@@ -413,6 +438,9 @@ export default function Layout() {
   // the choice persists across navigations + reloads.
   const [railOpen, setRailOpen] = useState(() => { try { return localStorage.getItem('vera-rail-open') !== '0' } catch { return true } })
   const toggleRail = (open: boolean) => { setRailOpen(open); try { localStorage.setItem('vera-rail-open', open ? '1' : '0') } catch { /* ignore */ } }
+  // Left nav can be minimized to an icons-only rail. Persists across reloads.
+  const [navCollapsed, setNavCollapsed] = useState(() => { try { return localStorage.getItem('vera-nav-collapsed') === '1' } catch { return false } })
+  const toggleNav = () => setNavCollapsed(c => { const next = !c; try { localStorage.setItem('vera-nav-collapsed', next ? '1' : '0') } catch { /* ignore */ }; return next })
   // When Sona produces an artifact (draft/campaign), reveal the rail so the
   // output is visible even if the operator had collapsed it.
   useEffect(() => {
@@ -479,56 +507,71 @@ export default function Layout() {
       {/* ── Left rail (SAM) ── white, narrow, flat nav, user at the bottom */}
       <aside
         className="flex-shrink-0 flex flex-col"
-        style={{ width: 204, background: 'var(--paper-warm)', borderRight: '1px solid var(--paper-edge)' }}
+        style={{ width: navCollapsed ? 64 : 204, background: 'var(--paper-warm)', borderRight: '1px solid var(--paper-edge)', transition: 'width 160ms ease' }}
       >
         {/* Active client — top-of-rail switcher (always-visible context). */}
-        <ClientSwitcher />
+        <ClientSwitcher collapsed={navCollapsed} />
 
         {/* Start a fresh chat — top-of-rail, the Claude/ChatGPT pattern. The
             ?new=<ts> param is read by VeraThread, which opens a new session. */}
         <button
           onClick={() => navigate(`${p('vera')}?new=${Date.now()}`)}
-          title="Start a new chat session"
-          className="flex items-center gap-2 px-2.5 py-1.5 mx-2 mt-2 transition-colors"
+          title={navCollapsed ? 'New session' : 'Start a new chat session'}
+          aria-label="Start a new chat session"
+          className={`flex items-center ${navCollapsed ? 'justify-center px-0' : 'gap-2 px-2.5'} py-1.5 mx-2 mt-2 transition-colors`}
           style={{ background: 'var(--accent)', color: '#fff', fontWeight: 600, fontSize: 13, borderRadius: 'var(--radius-md)', width: 'calc(100% - 1rem)', border: 'none', cursor: 'pointer' }}
         >
           <Plus size={16} strokeWidth={2.1} style={{ flexShrink: 0 }} />
-          <span className="flex-1 truncate text-left">New session</span>
+          {!navCollapsed && <span className="flex-1 truncate text-left">New session</span>}
         </button>
 
         {/* Primary nav is the daily content loop: create, review, schedule,
             organize. Setup surfaces (Playbook, Integrations) live below the
             loop, not in it, since they are configured once, not touched daily. */}
         <nav className="pt-1 space-y-0.5">
-          <RailLabel>Workflow</RailLabel>
+          {navCollapsed ? <div style={{ height: 6 }} /> : <RailLabel>Workflow</RailLabel>}
           {/* Desk (p('blueprint')) hidden from the rail; still reachable by URL. */}
-          <RailItem to={p('vera')}      icon={MessageSquare}   label="Agent"   tag="create" onClick={() => window.dispatchEvent(new CustomEvent('vera:home'))} />
-          <RailItem to={p('review')}    icon={CheckSquare}     label="Review"  badge={pendingCount} />
-          <RailItem to={p('calendar')}  icon={CalendarDays}    label="Planner" tag="schedule" />
-          <RailItem to={p('artifacts')} icon={Library}         label="Studio"  tag="organize" />
+          <RailItem to={p('vera')}      icon={MessageSquare}   label="Agent"   tag="create" collapsed={navCollapsed} onClick={() => window.dispatchEvent(new CustomEvent('vera:home'))} />
+          <RailItem to={p('review')}    icon={CheckSquare}     label="Review"  badge={pendingCount} collapsed={navCollapsed} />
+          <RailItem to={p('calendar')}  icon={CalendarDays}    label="Planner" tag="schedule" collapsed={navCollapsed} />
+          <RailItem to={p('artifacts')} icon={Library}         label="Studio"  tag="organize" collapsed={navCollapsed} />
 
-          <RailLabel>More</RailLabel>
-          <RailItem to={p('measure')}   icon={BarChart3}       label="Performance" soon />
-          <RailItem to={p('learning')}  icon={TrendingUp}      label="Learning" soon />
-          <RailItem to={p('keys')}      icon={KeyRound}        label="Integrations" />
+          {navCollapsed ? <RailDivider /> : <RailLabel>More</RailLabel>}
+          <RailItem to={p('measure')}   icon={BarChart3}       label="Performance" soon collapsed={navCollapsed} />
+          <RailItem to={p('learning')}  icon={TrendingUp}      label="Learning" soon collapsed={navCollapsed} />
+          <RailItem to={p('keys')}      icon={KeyRound}        label="Integrations" collapsed={navCollapsed} />
         </nav>
 
-        <RailRecents />
+        <RailRecents collapsed={navCollapsed} />
 
         <div className="flex-1" />
 
         {/* Utility group — mirrors SAM's AI Settings · Settings · user. */}
         {/* Settings opens as a modal (SAM pattern), not a page nav. */}
         <nav className="space-y-0.5 pb-1">
-          <RailItem to={p('brain')} icon={BookOpen} label="Playbook" />
-          <RailItem to="/skills" icon={Zap} label="AI Settings" />
+          <RailItem to={p('brain')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
+          <RailItem to="/skills" icon={Zap} label="AI Settings" collapsed={navCollapsed} />
           <button
             onClick={() => setSettingsOpen(true)}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 mx-2 transition-colors hover:bg-[var(--fog)]"
+            title={navCollapsed ? 'Settings' : undefined}
+            aria-label="Settings"
+            className={`w-full flex items-center ${navCollapsed ? 'justify-center px-0' : 'gap-2 px-2.5'} py-1.5 mx-2 transition-colors hover:bg-[var(--fog)]`}
             style={{ background: 'transparent', color: 'var(--ink-quiet)', fontWeight: 450, fontSize: 13, borderRadius: 'var(--radius-md)', width: 'calc(100% - 1rem)' }}
           >
             <Settings size={16} strokeWidth={1.75} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
-            <span className="flex-1 text-left truncate">Settings</span>
+            {!navCollapsed && <span className="flex-1 text-left truncate">Settings</span>}
+          </button>
+          {/* Minimize / expand the rail to icons only. */}
+          <button
+            onClick={toggleNav}
+            title={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={`w-full flex items-center ${navCollapsed ? 'justify-center px-0' : 'gap-2 px-2.5'} py-1.5 mx-2 transition-colors hover:bg-[var(--fog)]`}
+            style={{ background: 'transparent', color: 'var(--ghost)', fontWeight: 450, fontSize: 12.5, borderRadius: 'var(--radius-md)', width: 'calc(100% - 1rem)', border: 'none', cursor: 'pointer' }}
+          >
+            {navCollapsed
+              ? <ChevronRight size={16} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+              : <><ChevronLeft size={16} strokeWidth={1.75} style={{ color: 'var(--ghost)', flexShrink: 0 }} /><span className="flex-1 text-left truncate">Collapse</span></>}
           </button>
         </nav>
 
@@ -537,7 +580,7 @@ export default function Layout() {
           {userMenuOpen && (
             <>
               <div style={{ position: 'fixed', inset: 0, zIndex: 30 }} onClick={() => setUserMenuOpen(false)} />
-              <div style={{ position: 'absolute', left: 8, right: 8, bottom: '100%', marginBottom: 6, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-pop)', padding: 4 }}>
+              <div style={{ position: 'absolute', ...(navCollapsed ? { left: 8, width: 210 } : { left: 8, right: 8 }), bottom: '100%', marginBottom: 6, zIndex: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-pop)', padding: 4 }}>
                 <div style={{ padding: '8px 10px', fontSize: 12, color: 'var(--ghost)', borderBottom: '1px solid var(--line)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.email ?? 'Not signed in'}
                 </div>
@@ -549,14 +592,18 @@ export default function Layout() {
             </>
           )}
           <button onClick={() => setUserMenuOpen(o => !o)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 transition-colors hover:bg-[var(--fog)]"
+            title={navCollapsed ? displayName : undefined}
+            aria-label={`Account: ${displayName}`}
+            className={`w-full flex items-center ${navCollapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5'} py-2 transition-colors hover:bg-[var(--fog)]`}
             style={{ borderRadius: 'var(--radius-md)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
             <span className="w-7 h-7 flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
               style={{ background: 'var(--accent-tint)', color: 'var(--accent)', borderRadius: '50%' }}>
               {initials}
             </span>
-            <span className="flex-1 truncate text-[13.5px] text-left" style={{ color: 'var(--ink)' }}>{displayName}</span>
-            <ChevronsUpDown size={14} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
+            {!navCollapsed && <>
+              <span className="flex-1 truncate text-[13.5px] text-left" style={{ color: 'var(--ink)' }}>{displayName}</span>
+              <ChevronsUpDown size={14} style={{ color: 'var(--ghost)', flexShrink: 0 }} />
+            </>}
           </button>
         </div>
       </aside>
