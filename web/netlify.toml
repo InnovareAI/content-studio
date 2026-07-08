@@ -1,0 +1,9 @@
+# Sona (Next.js) on Netlify. This lives in web/, so the Netlify site for Sona
+# must set its base directory to `web`. The Next runtime plugin is auto-installed
+# by Netlify when it detects Next; it is declared here to be explicit.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
