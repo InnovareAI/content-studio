@@ -116,7 +116,7 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: 380 }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
-          <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>S</span>
+          <img src="/vera-avatar.png" alt="Sona" style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', objectFit: 'cover', objectPosition: 'top', background: 'var(--accent)', display: 'block' }} />
           <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>SONA</span>
         </div>
 
