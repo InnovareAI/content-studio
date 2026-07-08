@@ -1,16 +1,20 @@
 'use client'
 
-// SONA login — mirrors SAM's handler: Google + Microsoft SSO (Supabase
+// SONA login: mirrors SAM's handler with Google + Microsoft SSO (Supabase
 // signInWithOAuth) + a magic-link email fallback (SMTP). Built to match SAM
 // so the upcoming unified "InnovareAI Agentic System" login is a config merge,
-// not a rewrite — same providers, same flow.
+// not a rewrite, same providers, same flow.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from '@/lib/router-shim'
 import { Mail, Check, Loader2, LockKeyhole, Apple } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ENABLE_APPLE_LOGIN = process.env.NEXT_PUBLIC_ENABLE_APPLE_LOGIN === 'true'
+
+function safeReturnPath(value: string | null | undefined) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/'
+}
 
 // Brand glyphs (inline so we don't pull an icon dep for two logos).
 function GoogleG() {
@@ -44,10 +48,34 @@ export default function Login() {
   const [resetSent, setResetSent] = useState(false)
   const [loading, setLoading] = useState<null | 'google' | 'azure' | 'apple' | 'email' | 'password' | 'reset'>(null)
   const [error, setError] = useState('')
-  const from = typeof (location.state as { from?: unknown } | null)?.from === 'string'
-    ? (location.state as { from: string }).from
-    : '/'
+  const locationState = location.state as unknown as { from?: unknown } | null
+  const stateFrom = typeof locationState?.from === 'string'
+    ? locationState.from
+    : null
+  const from = safeReturnPath(stateFrom)
   const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(from)}`
+
+  useEffect(() => {
+    let active = true
+
+    const nextFromQuery = safeReturnPath(new URLSearchParams(window.location.search).get('next') ?? from)
+    const goNext = () => {
+      if (active) navigate(nextFromQuery, { replace: true })
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) goNext()
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) goNext()
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [from, navigate])
 
   async function oauth(provider: 'google' | 'azure' | 'apple') {
     setError(''); setLoading(provider)

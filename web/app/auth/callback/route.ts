@@ -1,5 +1,23 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { supabaseCookieOptions } from '@/utils/supabase/cookies'
+
+type SupabaseCookie = {
+  name: string
+  value: string
+  options: CookieOptions
+}
+
+type CallbackSession = {
+  access_token: string
+  refresh_token: string
+  provider_token?: string | null
+  provider_refresh_token?: string | null
+}
+
+function hasProviderTokens(session: CallbackSession | null) {
+  return Boolean(session?.provider_token || session?.provider_refresh_token)
+}
 
 // OAuth / magic-link / recovery callback. Supabase redirects here with a PKCE
 // `code`; we exchange it for a cookie session (which the middleware reads) and
@@ -31,20 +49,36 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        setAll(cookiesToSet: SupabaseCookie[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            response.cookies.set(name, value, options)
+          })
         },
       },
     },
   )
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     return NextResponse.redirect(`${base}/login?error=auth_callback`)
   }
+
+  if (hasProviderTokens(data.session)) {
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    })
+
+    if (sessionError) {
+      return NextResponse.redirect(`${base}/login?error=auth_callback`)
+    }
+  }
+
   return response
 }
