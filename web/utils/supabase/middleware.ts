@@ -54,7 +54,25 @@ function applyCookieSizeGuard(response: NextResponse, request: NextRequest) {
   return response
 }
 
+function redirectLoginCodeToCallback(request: NextRequest) {
+  if (
+    request.nextUrl.pathname !== '/login' ||
+    !request.nextUrl.searchParams.has('code')
+  ) {
+    return null
+  }
+
+  const callbackUrl = request.nextUrl.clone()
+  callbackUrl.pathname = '/auth/callback'
+  return NextResponse.redirect(callbackUrl)
+}
+
 export async function updateSession(request: NextRequest) {
+  const callbackRedirect = redirectLoginCodeToCallback(request)
+  if (callbackRedirect) {
+    return callbackRedirect
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -90,7 +108,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user && request.nextUrl.pathname.startsWith('/p/')) {
-    const redirectResponse = NextResponse.redirect(new URL('/login', request.url))
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+    const redirectResponse = NextResponse.redirect(loginUrl)
     copyResponseCookies(supabaseResponse, redirectResponse)
     return applyCookieSizeGuard(redirectResponse, request)
   }

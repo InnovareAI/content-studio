@@ -7,23 +7,17 @@ import type { ElementType, ReactNode } from 'react'
 import {
   BarChart3,
   BookOpen,
-  CalendarDays,
+  Brain,
   Check,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Clock,
-  KeyRound,
   LayoutGrid,
-  Library,
   LogOut,
   MessageSquare,
   Plus,
-  Settings,
-  TrendingUp,
-  X,
-  Zap,
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useProject } from '@/components/providers/ProjectProvider'
@@ -233,10 +227,6 @@ function RailLabel({ children }: { children: string }) {
   )
 }
 
-function RailDivider() {
-  return <div style={{ height: 1, background: 'var(--paper-edge)', margin: '8px 12px' }} />
-}
-
 function RailRecents({
   collapsed,
   space,
@@ -287,7 +277,7 @@ function RailRecents({
   if (collapsed) return null
 
   const open = (sessionId: string) => {
-    const target = spacePath(space, 'agent')
+    const target = spacePath(space, 'vera')
 
     try {
       localStorage.setItem(`vera-session:${space.id}`, sessionId)
@@ -580,88 +570,6 @@ function ClientSwitcher({
   )
 }
 
-function SettingsDialog({ onClose, space }: { onClose: () => void; space: AppShellSpace }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 400,
-        background: 'rgba(20,20,22,0.34)',
-        backdropFilter: 'blur(2px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
-    >
-      <section
-        onClick={(event) => event.stopPropagation()}
-        style={{
-          width: 'min(420px, 94vw)',
-          background: 'var(--surface)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--line)',
-          boxShadow: 'var(--shadow-modal)',
-          padding: 18,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Settings</h2>
-            <p style={{ fontSize: 12.5, color: 'var(--ghost)', margin: '3px 0 0' }}>{space.name}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close settings"
-            style={{
-              width: 28,
-              height: 28,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid var(--line)',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--paper)',
-              color: 'var(--ghost)',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-          <Link href={spacePath(space, 'brain')} onClick={onClose} style={settingsLinkStyle}>
-            Playbook
-          </Link>
-          <Link href={spacePath(space, 'keys')} onClick={onClose} style={settingsLinkStyle}>
-            Integrations
-          </Link>
-          <Link href={spacePath(space, 'skills')} onClick={onClose} style={settingsLinkStyle}>
-            AI Settings
-          </Link>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-const settingsLinkStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  minHeight: 36,
-  padding: '8px 10px',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--line)',
-  background: 'var(--paper)',
-  color: 'var(--ink)',
-  fontSize: 13,
-  fontWeight: 500,
-  textDecoration: 'none',
-}
-
 export function AppShell({
   children,
   pendingCount,
@@ -756,7 +664,7 @@ export function AppShell({
   const space = activeProject
 
   const startNewSession = () => {
-    router.push(`${spacePath(space, 'agent')}?new=${Date.now()}`)
+    router.push(`${spacePath(space, 'vera')}?new=${Date.now()}`)
   }
 
   const handleSignOut = async () => {
@@ -804,12 +712,17 @@ export function AppShell({
         </button>
 
         <nav className="pt-1 space-y-0.5">
-          {navCollapsed ? <div style={{ height: 6 }} /> : <RailLabel>Workflow</RailLabel>}
+          {navCollapsed ? <div style={{ height: 6 }} /> : <RailLabel>Loop</RailLabel>}
           <RailItem
-            href={spacePath(space, 'agent')}
+            href={`/p/${space.slug}`}
+            icon={LayoutGrid}
+            label="Home"
+            collapsed={navCollapsed}
+          />
+          <RailItem
+            href={spacePath(space, 'vera')}
             icon={MessageSquare}
-            label="Agent"
-            tag="create"
+            label="VERA"
             collapsed={navCollapsed}
             onClick={() => window.dispatchEvent(new CustomEvent('vera:home'))}
           />
@@ -821,24 +734,18 @@ export function AppShell({
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'calendar')}
-            icon={CalendarDays}
-            label="Planner"
-            tag="schedule"
+            href={spacePath(space, 'knowledge')}
+            icon={BookOpen}
+            label="Knowledge"
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'artifacts')}
-            icon={Library}
-            label="Studio"
-            tag="organize"
+            href={spacePath(space, 'brain')}
+            icon={Brain}
+            label="Brain"
             collapsed={navCollapsed}
           />
-
-          {navCollapsed ? <RailDivider /> : <RailLabel>More</RailLabel>}
-          <RailItem href={spacePath(space, 'measure')} icon={BarChart3} label="Performance" soon collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'learning')} icon={TrendingUp} label="Learning" soon collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'keys')} icon={KeyRound} label="Integrations" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'measure')} icon={BarChart3} label="Measure" collapsed={navCollapsed} />
         </nav>
 
         <RailRecents collapsed={navCollapsed} space={space} />
@@ -846,9 +753,6 @@ export function AppShell({
         <div className="flex-1" />
 
         <nav className="space-y-0.5 pb-1">
-          <RailItem href={spacePath(space, 'brain')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'skills')} icon={Zap} label="AI Settings" collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'settings')} icon={Settings} label="Settings" collapsed={navCollapsed} />
           <button
             type="button"
             onClick={toggleNav}

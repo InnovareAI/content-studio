@@ -27,7 +27,7 @@ const ProjectContext = createContext<ProjectContextType>({
 
 type ProjectProviderProps = Readonly<{
   children: ReactNode
-  activeProject: Project
+  activeProject: Project | null
   projects: Project[]
 }>
 
@@ -40,7 +40,7 @@ export function ProjectProvider({
 
   const visibleProjects = useMemo(() => {
     const byId = new Map<string, Project>()
-    byId.set(activeProject.id, activeProject)
+    if (activeProject) byId.set(activeProject.id, activeProject)
 
     for (const project of projects) {
       if (!project.is_archived) byId.set(project.id, project)
@@ -59,7 +59,7 @@ export function ProjectProvider({
       /* ignore storage errors */
     }
 
-    router.push(`/p/${target.slug}/agent`)
+    router.push(`/p/${target.slug}/vera`)
   }, [router, visibleProjects])
 
   const refetch = useCallback(() => {

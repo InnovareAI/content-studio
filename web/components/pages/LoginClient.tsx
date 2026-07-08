@@ -12,8 +12,8 @@ import { supabase } from '@/lib/supabase'
 
 const ENABLE_APPLE_LOGIN = process.env.NEXT_PUBLIC_ENABLE_APPLE_LOGIN === 'true'
 
-function safeReturnPath(value: string | null | undefined) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/'
+function safeReturnPath(value: string | null | undefined, fallback = '/spaces') {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : fallback
 }
 
 // Brand glyphs (inline so we don't pull an icon dep for two logos).
@@ -52,7 +52,8 @@ export default function Login() {
   const stateFrom = typeof locationState?.from === 'string'
     ? locationState.from
     : null
-  const from = safeReturnPath(stateFrom)
+  const queryFrom = new URLSearchParams(window.location.search).get('next')
+  const from = safeReturnPath(queryFrom ?? stateFrom)
   const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(from)}`
 
   useEffect(() => {
