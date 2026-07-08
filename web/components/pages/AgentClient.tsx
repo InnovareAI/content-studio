@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowUp, Square, Sparkles, Check, RefreshCw, Pencil, Send, PenLine, Megaphone, Lightbulb, ImagePlus, Clapperboard, Zap, CalendarDays, Paperclip, FileText, Link2, Copy, Pin, X, Target, KeyRound, Lock } from 'lucide-react'
+import { ArrowUp, Square, Sparkles, Check, RefreshCw, Pencil, Send, PenLine, Megaphone, Lightbulb, ImagePlus, Clapperboard, Zap, CalendarDays, Paperclip, FileText, Copy, Pin, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { Post } from '@/lib/supabase'
 import { useOrg } from '@/components/providers/OrgProvider'
@@ -26,13 +26,6 @@ import Markdown from '@/components/Markdown'
 import { downloadMarkdown } from '@/lib/exportDoc'
 import { markdownToText } from '@/lib/mdToText'
 import { hasBusinessContext, parseProjectInstructions } from '@/lib/businessContext'
-import {
-  buildModelRecommendations,
-  imageModelProvider,
-  type ModelPricingGuide,
-  type SpendEstimate,
-} from '@/lib/modelEconomics'
-import { useModelPricingCatalog, type ModelPricingCatalogSource } from '@/lib/useModelPricingCatalog'
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL as string
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
@@ -89,31 +82,6 @@ type CommandStats = {
 type DocumentAttachment = { kind: 'document'; document: DocumentBlock; name: string; mime: string; size: number; truncated?: boolean }
 type ComposerAttachment = ImageAttachment | DocumentAttachment
 type MessageFile = { name: string; mime: string; size: number }
-type ProviderCapabilities = {
-  loaded: boolean
-  isMaster: boolean
-  hasAnthropic: boolean
-  hasOpenRouter: boolean
-  hasOpenAI: boolean
-  hasFal: boolean
-  imagesEnabled: boolean
-  standardVideoEnabled: boolean
-  premiumMediaEnabled: boolean
-  platformMediaKeysEnabled: boolean
-  hasPlatformImageEntitlement: boolean
-  hasPlatformVideoEntitlement: boolean
-  textReady: boolean
-  imageReady: boolean
-  videoReady: boolean
-  needsTextKey: boolean
-  defaultTextModel: string | null
-  defaultImageModel: string
-  defaultVideoModel: string
-  defaultImageVideoModel: string
-  budgetGuardEnabled: boolean
-  budgetGuardMode: 'warn' | 'enforce'
-  monthlyBudgetUsd: number | null
-}
 type StoredAttachment =
   | { kind: 'image'; url: string }
   | { kind: 'video'; url: string }
@@ -124,45 +92,6 @@ type WireContentBlock =
   | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
   | DocumentBlock
 
-const DEFAULT_CLIENT_AI_POLICY = {
-  imagesEnabled: true,
-  standardVideoEnabled: false,
-  premiumMediaEnabled: false,
-  platformMediaKeysEnabled: false,
-  defaultTextModel: null as string | null,
-  defaultImageModel: 'nano-banana',
-  defaultVideoModel: 'hailuo',
-  defaultImageVideoModel: 'hailuo-i2v',
-  budgetGuardEnabled: true,
-  budgetGuardMode: 'warn' as const,
-  monthlyBudgetUsd: null as number | null,
-}
-
-const DEFAULT_PROVIDER_CAPABILITIES: ProviderCapabilities = {
-  loaded: false,
-  isMaster: false,
-  hasAnthropic: false,
-  hasOpenRouter: false,
-  hasOpenAI: false,
-  hasFal: false,
-  imagesEnabled: DEFAULT_CLIENT_AI_POLICY.imagesEnabled,
-  standardVideoEnabled: DEFAULT_CLIENT_AI_POLICY.standardVideoEnabled,
-  premiumMediaEnabled: DEFAULT_CLIENT_AI_POLICY.premiumMediaEnabled,
-  platformMediaKeysEnabled: DEFAULT_CLIENT_AI_POLICY.platformMediaKeysEnabled,
-  hasPlatformImageEntitlement: false,
-  hasPlatformVideoEntitlement: false,
-  textReady: false,
-  imageReady: false,
-  videoReady: false,
-  needsTextKey: false,
-  defaultTextModel: DEFAULT_CLIENT_AI_POLICY.defaultTextModel,
-  defaultImageModel: DEFAULT_CLIENT_AI_POLICY.defaultImageModel,
-  defaultVideoModel: DEFAULT_CLIENT_AI_POLICY.defaultVideoModel,
-  defaultImageVideoModel: DEFAULT_CLIENT_AI_POLICY.defaultImageVideoModel,
-  budgetGuardEnabled: DEFAULT_CLIENT_AI_POLICY.budgetGuardEnabled,
-  budgetGuardMode: DEFAULT_CLIENT_AI_POLICY.budgetGuardMode,
-  monthlyBudgetUsd: DEFAULT_CLIENT_AI_POLICY.monthlyBudgetUsd,
-}
 const EMPTY_COMMAND_STATS: CommandStats = {
   draft: 0,
   pending: 0,
@@ -171,27 +100,6 @@ const EMPTY_COMMAND_STATS: CommandStats = {
   posted: 0,
   rejected: 0,
   campaigns: 0,
-}
-const PLATFORM_MEDIA_KEYS_ENABLED = process.env.NEXT_PUBLIC_PLATFORM_MEDIA_KEYS_ENABLED === 'true'
-
-function parseClientAiPolicy(value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return DEFAULT_CLIENT_AI_POLICY
-  }
-  const policy = value as Record<string, unknown>
-  return {
-    imagesEnabled: typeof policy.images_enabled === 'boolean' ? policy.images_enabled : true,
-    standardVideoEnabled: typeof policy.standard_video_enabled === 'boolean' ? policy.standard_video_enabled : false,
-    premiumMediaEnabled: typeof policy.premium_media_enabled === 'boolean' ? policy.premium_media_enabled : false,
-    platformMediaKeysEnabled: typeof policy.platform_media_keys_enabled === 'boolean' ? policy.platform_media_keys_enabled : DEFAULT_CLIENT_AI_POLICY.platformMediaKeysEnabled,
-    defaultTextModel: typeof policy.default_text_model === 'string' && policy.default_text_model.trim() ? policy.default_text_model.trim() : null,
-    defaultImageModel: typeof policy.default_image_model === 'string' && policy.default_image_model.trim() ? policy.default_image_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultImageModel,
-    defaultVideoModel: typeof policy.default_video_model === 'string' && policy.default_video_model.trim() ? policy.default_video_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultVideoModel,
-    defaultImageVideoModel: typeof policy.default_image_video_model === 'string' && policy.default_image_video_model.trim() ? policy.default_image_video_model.trim() : DEFAULT_CLIENT_AI_POLICY.defaultImageVideoModel,
-    budgetGuardEnabled: typeof policy.budget_guard_enabled === 'boolean' ? policy.budget_guard_enabled : DEFAULT_CLIENT_AI_POLICY.budgetGuardEnabled,
-    budgetGuardMode: policy.budget_guard_mode === 'enforce' ? 'enforce' as const : DEFAULT_CLIENT_AI_POLICY.budgetGuardMode,
-    monthlyBudgetUsd: typeof policy.monthly_budget_usd === 'number' && Number.isFinite(policy.monthly_budget_usd) ? policy.monthly_budget_usd : null,
-  }
 }
 
 function extension(name: string) {
@@ -256,8 +164,6 @@ function hexToken(byteLength = 24) {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
 }
-
-type ApprovalWebhookError = Error & { status?: number }
 
 function attachmentPrompt(attachments: ComposerAttachment[]) {
   const images = attachments.filter(a => a.kind === 'image').length
@@ -457,7 +363,6 @@ export default function AgentClient() {
   const [draft, setDraft] = useState<Post | null>(null)
   const [draftHistory, setDraftHistory] = useState<Post[]>([])
   const [campaign, setCampaign] = useState<CampaignData | null>(null)
-  const [approving, setApproving] = useState(false)
   const [stats, setStats] = useState<CommandStats>(EMPTY_COMMAND_STATS)
   const [sessionId, setSessionId] = useState<string>('')
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
@@ -596,80 +501,6 @@ export default function AgentClient() {
       })
     return () => { cancelled = true }
   }, [activeProject?.id, sessionId])
-
-  const [providerCapabilities, setProviderCapabilities] = useState<ProviderCapabilities>(DEFAULT_PROVIDER_CAPABILITIES)
-  const { catalog: pricingCatalog, source: pricingSource, rowCount: pricingRowCount } = useModelPricingCatalog()
-
-  useEffect(() => {
-    if (!activeOrg?.id || !activeProject?.id) {
-      setProviderCapabilities(DEFAULT_PROVIDER_CAPABILITIES)
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      const [{ data: org }, { data: rows }, { data: project }, { data: entitlements }] = await Promise.all([
-        supabase.from('organizations').select('is_master').eq('id', activeOrg.id).maybeSingle(),
-        supabase.from('client_api_keys').select('provider').eq('project_id', activeProject.id).eq('status', 'active').in('provider', ['anthropic', 'openrouter', 'openai', 'fal', 'fal_ai']),
-        supabase.from('projects').select('ai_policy').eq('id', activeProject.id).maybeSingle(),
-        user?.id
-          ? supabase.from('ai_user_entitlements')
-            .select('org_id, project_id, capability, expires_at')
-            .eq('user_id', user.id)
-            .in('capability', ['platform_fal_video', 'platform_fal_image'])
-            .eq('enabled', true)
-          : Promise.resolve({ data: [] }),
-      ])
-      if (cancelled) return
-      const isMaster = !!(org as { is_master?: boolean } | null)?.is_master
-      const aiPolicy = parseClientAiPolicy((project as { ai_policy?: unknown } | null)?.ai_policy)
-      const providers = new Set(((rows ?? []) as Array<{ provider: string | null }>).map(row => row.provider).filter(Boolean) as string[])
-      const platformMediaProject = PLATFORM_MEDIA_KEYS_ENABLED && aiPolicy.platformMediaKeysEnabled && isMaster && activeProject.slug === 'innovareai-brand'
-      const hasAnthropic = providers.has('anthropic')
-      const hasOpenRouter = providers.has('openrouter')
-      const hasOpenAI = providers.has('openai')
-      const hasFal = providers.has('fal') || providers.has('fal_ai')
-      const entitlementRows = (entitlements ?? []) as Array<{ org_id?: string | null; project_id?: string | null; capability?: string | null; expires_at?: string | null }>
-      const entitlementApplies = (row: { org_id?: string | null; project_id?: string | null; expires_at?: string | null }) => {
-          if (!platformMediaProject) return false
-          if (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) return false
-          if (row.project_id) return row.project_id === activeProject.id
-          if (row.org_id) return row.org_id === activeOrg.id
-          return false
-      }
-      const hasPlatformImageEntitlement = entitlementRows.some(row => row.capability === 'platform_fal_image' && entitlementApplies(row))
-      const hasPlatformVideoEntitlement = entitlementRows.some(row => row.capability === 'platform_fal_video' && entitlementApplies(row))
-      const clientImageRoute = imageModelProvider(aiPolicy.defaultImageModel, { hasOpenRouter, hasOpenAI, hasFal })
-      const platformImageRoute = platformMediaProject && hasPlatformImageEntitlement
-        ? imageModelProvider(aiPolicy.defaultImageModel, { hasOpenRouter: true, hasOpenAI: true, hasFal: false })
-        : null
-      setProviderCapabilities({
-        loaded: true,
-        isMaster,
-        hasAnthropic,
-        hasOpenRouter,
-        hasOpenAI,
-        hasFal,
-        imagesEnabled: aiPolicy.imagesEnabled,
-        standardVideoEnabled: aiPolicy.standardVideoEnabled,
-        premiumMediaEnabled: aiPolicy.premiumMediaEnabled,
-        platformMediaKeysEnabled: aiPolicy.platformMediaKeysEnabled,
-        hasPlatformImageEntitlement,
-        hasPlatformVideoEntitlement,
-        textReady: platformMediaProject || hasAnthropic || hasOpenRouter,
-        imageReady: aiPolicy.imagesEnabled && (!!clientImageRoute || !!platformImageRoute),
-        videoReady: (hasFal && (aiPolicy.standardVideoEnabled || aiPolicy.premiumMediaEnabled)) || hasPlatformVideoEntitlement,
-        needsTextKey: !platformMediaProject && !hasAnthropic && !hasOpenRouter,
-        defaultTextModel: aiPolicy.defaultTextModel,
-        defaultImageModel: aiPolicy.defaultImageModel,
-        defaultVideoModel: aiPolicy.defaultVideoModel,
-        defaultImageVideoModel: aiPolicy.defaultImageVideoModel,
-        budgetGuardEnabled: aiPolicy.budgetGuardEnabled,
-        budgetGuardMode: aiPolicy.budgetGuardMode,
-        monthlyBudgetUsd: aiPolicy.monthlyBudgetUsd,
-      })
-    })()
-    return () => { cancelled = true }
-  }, [activeOrg?.id, activeProject?.id, activeProject?.slug, user?.id])
 
   // Resume any in-flight video renders on load. A render that was still going
   // when the page was refreshed / closed used to be lost forever (its fal
@@ -1377,55 +1208,6 @@ export default function AgentClient() {
     }
   }
 
-  async function callApprovalWebhook(payload: Record<string, unknown>, bearer: string) {
-    const res = await fetch(`${SUPA}/functions/v1/approval-webhook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': `Bearer ${bearer}` },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json().catch(() => null) as { post?: Post; error?: string } | null
-    if (!res.ok) {
-      const err = new Error(data?.error ?? `HTTP ${res.status}`) as ApprovalWebhookError
-      err.status = res.status
-      throw err
-    }
-    return data?.post ?? null
-  }
-
-  async function approveDraft() {
-    if (!draft?.id) return
-    setApproving(true)
-    try {
-      ensureDraftInActiveProject(draft)
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) throw error
-      const reviewedBy = user?.email ?? user?.id ?? 'SONA operator'
-      let updated: Post | null = null
-
-      if (session?.access_token) {
-        try {
-          updated = await callApprovalWebhook({ post_id: draft.id, action: 'approved', reviewed_by: reviewedBy }, session.access_token)
-        } catch (e) {
-          const err = e as ApprovalWebhookError
-          if (err.status !== 401) throw err
-        }
-      }
-
-      if (!updated) {
-        const reviewToken = draft.review_token ?? await ensureReviewToken(draft)
-        updated = await callApprovalWebhook({ review_token: reviewToken, action: 'approved', reviewed_by: reviewedBy }, ANON)
-      }
-
-      if (!updated) throw new Error('Sign in again to approve directly, or generate a sharing link and approve from the review page.')
-      push({ kind: 'success', title: 'Approved', body: 'Moved to the review queue as approved.' })
-      setDraft(prev => prev?.id === draft.id ? { ...prev, ...updated } : prev)
-      setDraftHistory(prev => prev.map(p => p.id === draft.id ? { ...p, ...updated } : p))
-    } catch (e) {
-      push({ kind: 'danger', title: 'Approve failed', body: (e as Error).message })
-    } finally {
-      setApproving(false)
-    }
-  }
   // "Send for approval" pins the completed post into the approval queue
   // (status 'pending' = Awaiting approval, what the Review queue surfaces) and
   // opens the reviewer's approval page with the link copied to share. The
@@ -1500,31 +1282,14 @@ export default function AgentClient() {
     setInput('Regenerate that draft. Same brief, fresh take.')
     setTimeout(() => taRef.current?.focus(), 0)
   }
-  const openProviderKeys = useCallback(() => {
-    if (activeProject?.slug) router.push(`/p/${activeProject.slug}/keys`)
-    else router.push('/spaces')
-  }, [activeProject?.slug, router])
-
   // Push the draft artifact into the right rail
   const draftIdx = draft ? draftHistory.findIndex(item => item.id === draft.id) : -1
   useRightRail(
     draft ? (
       <DraftArtifact
         draft={draft}
-        approving={approving}
         sending={sending}
-        onApprove={approveDraft}
         onSendForApproval={sendForApproval}
-        onCopyShareLink={async () => {
-          try {
-            const url = await reviewUrlForDraft(draft)
-            try { await navigator.clipboard?.writeText(url) } catch { /* ignore */ }
-            push({ kind: 'success', title: 'Sharing link copied', body: 'Public review link copied to the clipboard.' })
-          } catch (e) {
-            push({ kind: 'danger', title: "Couldn't generate sharing link", body: (e as Error).message })
-            throw e
-          }
-        }}
         onTweak={tweakDraft}
         onRegenerate={regenerateDraft}
         onBack={campaign ? () => setDraft(null) : undefined}
@@ -1532,16 +1297,11 @@ export default function AgentClient() {
         versionTotal={draftHistory.length}
         onPrevVersion={draftIdx > 0 ? () => setDraft(draftHistory[draftIdx - 1]) : undefined}
         onNextVersion={draftIdx >= 0 && draftIdx < draftHistory.length - 1 ? () => setDraft(draftHistory[draftIdx + 1]) : undefined}
-        providerCapabilities={providerCapabilities}
-        pricingCatalog={pricingCatalog}
-        pricingSource={pricingSource}
-        pricingRowCount={pricingRowCount}
-        onAddKey={openProviderKeys}
       />
     ) : campaign ? (
       <CampaignArtifact campaign={campaign} onOpenPost={p => { const post = p as unknown as Post; if (post.id && sessionId) { try { localStorage.setItem(`vera-draft:${sessionId}`, post.id) } catch { /* ignore */ } } setDraft(post) }} />
     ) : null,
-    [draft, campaign, approving, sending, draftIdx, draftHistory.length, user?.id, user?.email, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, openProviderKeys],
+    [draft, campaign, sending, draftIdx, draftHistory.length],
     // Wide, readable artifact panel - this is the working surface, not a
     // skinny sidebar. ~42vw, clamped so it stays sane on small + huge screens.
     'clamp(420px, 42vw, 660px)',
@@ -1764,30 +1524,15 @@ function Bubble({ m, onPin }: { m: Message; onPin?: (content: string) => void })
 
 // --- right rail: a FULL preview of the post, as it will appear once live --
 // A realistic LinkedIn-style card (author, body, media, reaction bar) so the
-// operator sees the actual post - plus the approve / tweak / regenerate bar.
-function DraftArtifact({ draft, approving, sending, onApprove, onSendForApproval, onCopyShareLink, onTweak, onRegenerate, onBack, versionIdx, versionTotal, onPrevVersion, onNextVersion, providerCapabilities, pricingCatalog, pricingSource, pricingRowCount, onAddKey }: {
-  draft: Post; approving: boolean; sending: boolean; onApprove: () => void; onSendForApproval: () => void; onCopyShareLink: () => Promise<void>; onTweak: () => void; onRegenerate: () => void; onBack?: () => void
+// operator sees the actual post plus the send / tweak / regenerate bar.
+function DraftArtifact({ draft, sending, onSendForApproval, onTweak, onRegenerate, onBack, versionIdx, versionTotal, onPrevVersion, onNextVersion }: {
+  draft: Post; sending: boolean; onSendForApproval: () => void; onTweak: () => void; onRegenerate: () => void; onBack?: () => void
   versionIdx: number; versionTotal: number; onPrevVersion?: () => void; onNextVersion?: () => void
-  providerCapabilities: ProviderCapabilities
-  pricingCatalog?: ModelPricingGuide[]
-  pricingSource?: ModelPricingCatalogSource
-  pricingRowCount?: number
-  onAddKey?: () => void
 }) {
   const isApproved = (draft.status ?? '').toLowerCase() === 'approved'
   const channel = (draft.channel ?? 'LinkedIn') as string
   const spec = draftCreativeSpec(draft)
   const status = draftProductionStatus(draft)
-  const schedule = draftScheduleLabel(draft)
-  const hasMedia = !!draft.media_url || draftMediaFrames(draft).length > 0
-  const [linkCopied, setLinkCopied] = useState(false)
-  const copyShareLink = async () => {
-    if (!draft.id) return
-    try {
-      await onCopyShareLink()
-      setLinkCopied(true); setTimeout(() => setLinkCopied(false), 1800)
-    } catch { /* parent toast handles the send path; copy failure can be retried */ }
-  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: space[2], padding: `${space[5]} ${space[5]} ${space[3]}`, flexShrink: 0, borderBottom: `1px solid ${color.line}`, background: color.paper }}>
@@ -1821,25 +1566,6 @@ function DraftArtifact({ draft, approving, sending, onApprove, onSendForApproval
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: `${space[4]} ${space[5]} ${space[5]}`, display: 'grid', gap: space[4], alignContent: 'start' }}>
-        <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: space[2], justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.accent, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
-              <Target size={12} />
-              Draft controls
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: status.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color }} />
-              {status.label}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: space[2] }}>
-            <DraftControlTile label="Channel" value={channel} detail={draft.format || 'Post'} />
-            <DraftControlTile label="Spec" value={spec.dimensions} detail={spec.label} />
-            <DraftControlTile label="Schedule" value={schedule.value} detail={schedule.detail} />
-            <DraftControlTile label="Model" value={draft.model_used || 'Not recorded'} detail={hasMedia ? 'Media attached' : 'No media yet'} />
-          </div>
-        </section>
-
         <section style={{ display: 'grid', gap: space[3] }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
             <span style={{ color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>Platform preview</span>
@@ -1847,26 +1573,6 @@ function DraftArtifact({ draft, approving, sending, onApprove, onSendForApproval
           </div>
         <PlatformPostPreview post={draft} density="standard" autoplayMedia />
         </section>
-
-        <DraftMediaStoryboard draft={draft} spec={spec} />
-
-        <DraftModelPanel
-          capabilities={providerCapabilities}
-          pricingCatalog={pricingCatalog}
-          pricingSource={pricingSource}
-          pricingRowCount={pricingRowCount}
-          onAddKey={onAddKey}
-        />
-
-        <DraftApprovalPath
-          status={status}
-          isApproved={isApproved}
-          hasReviewToken={!!draft.review_token}
-          linkCopied={linkCopied}
-          onCopyShareLink={copyShareLink}
-          onApprove={onApprove}
-          approving={approving}
-        />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: space[2] }}>
           <button onClick={onTweak} style={{ ...btn(color.paper2, color.ink, false), flex: 1, justifyContent: 'center', border: `1px solid ${color.line}` }}><Pencil size={12} /> Tweak</button>
@@ -1879,172 +1585,6 @@ function DraftArtifact({ draft, approving, sending, onApprove, onSendForApproval
 
 type DraftSpec = { label: string; dimensions: string; aspect: string }
 
-function DraftControlTile({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div style={{ minWidth: 0, background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, padding: space[3] }}>
-      <div style={{ color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.medium, marginBottom: 4 }}>{label}</div>
-      <div style={{ color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
-      <div style={{ color: color.ghost, fontSize: t.size.micro, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{detail}</div>
-    </div>
-  )
-}
-
-function DraftMediaStoryboard({ draft, spec }: { draft: Post; spec: DraftSpec }) {
-  const frames = draftMediaFrames(draft)
-  const prompt = draftMediaPrompt(draft)
-  if (!draft.media_url && frames.length === 0 && !prompt) {
-    return (
-      <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4] }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: space[2], color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold, marginBottom: space[2] }}>
-          <ImagePlus size={12} />
-          Media
-        </div>
-        <p style={{ margin: 0, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5 }}>
-          No media attached yet. Ask SONA for a platform prompt, carousel, or storyboard before rendering paid media.
-        </p>
-      </section>
-    )
-  }
-  return (
-    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
-          <ImagePlus size={12} />
-          Media and storyboard
-        </span>
-        <span style={{ color: color.ghost, fontSize: t.size.micro }}>{spec.dimensions}</span>
-      </div>
-      {frames.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: space[2] }}>
-          {frames.slice(0, 6).map((frame, index) => (
-            <figure key={`${frame.url}-${index}`} style={{ margin: 0, border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden', background: color.paper2 }}>
-              <img src={frame.url} alt={frame.text || `Storyboard frame ${index + 1}`} style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />
-              <figcaption style={{ padding: space[2], color: color.ghost, fontSize: t.size.micro, lineHeight: 1.35 }}>
-                {frame.text || `Frame ${index + 1}`}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      ) : draft.media_url ? (
-        <div style={{ border: `1px solid ${color.line}`, borderRadius: radius.md, overflow: 'hidden', background: color.paper2 }}>
-          {draft.media_type === 'video'
-            ? <video src={draft.media_url} controls playsInline style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />
-            : <img src={draft.media_url} alt={draft.title || 'Draft media'} style={{ width: '100%', aspectRatio: spec.aspect, objectFit: 'cover', display: 'block' }} />}
-        </div>
-      ) : null}
-      {prompt && (
-        <div style={{ color: color.ink2, fontSize: t.size.micro, lineHeight: 1.45, background: color.paper2, border: `1px solid ${color.line}`, borderRadius: radius.md, padding: space[3] }}>
-          {prompt}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function DraftModelPanel({ capabilities, pricingCatalog, pricingSource, pricingRowCount, onAddKey }: {
-  capabilities: ProviderCapabilities
-  pricingCatalog?: ModelPricingGuide[]
-  pricingSource?: ModelPricingCatalogSource
-  pricingRowCount?: number
-  onAddKey?: () => void
-}) {
-  const routes = capabilities.loaded ? modelRouteRecommendations(capabilities, pricingCatalog).slice(0, 3) : []
-  const pricingStatus = pricingCatalogBadge(pricingSource, pricingRowCount)
-  return (
-    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
-          <KeyRound size={12} />
-          Model and spend
-        </span>
-        <span style={{ color: pricingStatus.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{pricingStatus.label}</span>
-      </div>
-      {routes.length > 0 ? (
-        <div style={{ display: 'grid', gap: space[2] }}>
-          {routes.map(route => {
-            const Icon = route.icon
-            const tone = routeToneStyle(route.tone)
-            return (
-              <div key={route.label} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', alignItems: 'center', gap: space[2], padding: space[3], border: `1px solid ${color.line}`, borderRadius: radius.md, background: color.paper2 }}>
-                <Icon size={13} style={{ color: tone.fg }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{route.label}: {route.status}</div>
-                  <div style={{ color: color.ghost, fontSize: t.size.micro, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{route.cost}</div>
-                </div>
-                <span style={{ color: tone.fg, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{route.estimate.label}</span>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <p style={{ margin: 0, color: color.ghost, fontSize: t.size.cap, lineHeight: 1.5 }}>Model routing is loading.</p>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: space[2], flexWrap: 'wrap', color: color.ghost, fontSize: t.size.micro }}>
-        <Lock size={12} style={{ color: color.warn }} />
-        <span>Space keys first. Premium media never defaults.</span>
-        {onAddKey && (
-          <button onClick={onAddKey} style={{ marginLeft: 'auto', padding: '5px 9px', borderRadius: radius.pill, border: `1px solid ${color.line}`, background: color.paper2, color: color.ink2, fontSize: t.size.micro, fontWeight: t.weight.semibold, cursor: 'pointer' }}>
-            Keys
-          </button>
-        )}
-      </div>
-    </section>
-  )
-}
-
-function DraftApprovalPath({ status, isApproved, hasReviewToken, linkCopied, onCopyShareLink, onApprove, approving }: {
-  status: { label: string; color: string }
-  isApproved: boolean
-  hasReviewToken: boolean
-  linkCopied: boolean
-  onCopyShareLink: () => void
-  onApprove: () => void
-  approving: boolean
-}) {
-  return (
-    <section style={{ background: color.surface, border: `1px solid ${color.line}`, borderRadius: radius.lg, padding: space[4], display: 'grid', gap: space[3] }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[3] }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: color.ghost, fontSize: t.size.micro, textTransform: 'uppercase', letterSpacing: 0, fontWeight: t.weight.semibold }}>
-          <Check size={12} />
-          Approval path
-        </span>
-        <span style={{ color: status.color, fontSize: t.size.micro, fontWeight: t.weight.semibold }}>{status.label}</span>
-      </div>
-      <div style={{ display: 'grid', gap: space[2] }}>
-        <DraftApprovalStep done label="Draft generated" detail="Ready for review, comments, or model comparison." />
-        <DraftApprovalStep done={hasReviewToken || isApproved} label="Shareable review link" detail={hasReviewToken ? 'Public review token exists.' : 'Generate a link for reviewer access.'} />
-        <DraftApprovalStep done={isApproved} label="Approved for schedule" detail={isApproved ? 'Approved status is saved.' : 'Approve directly or send to the queue.'} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: space[2] }}>
-        <button onClick={onCopyShareLink} title="Copy a public, no-login link to this post for sharing"
-          style={{ ...btn(color.paper2, linkCopied ? color.success : color.ink, false), justifyContent: 'center', border: `1px solid ${linkCopied ? color.success : color.line}` }}>
-          {linkCopied ? <><Check size={12} /> Link copied</> : <><Link2 size={12} /> Review link</>}
-        </button>
-        {!isApproved && (
-          <button onClick={onApprove} disabled={approving} title="Skip the reviewer and approve this yourself"
-            style={{ ...btn(color.paper2, color.ink2, approving), justifyContent: 'center', border: `1px solid ${color.line}` }}>
-            {approving ? '...' : <><Check size={12} /> Approve directly</>}
-          </button>
-        )}
-      </div>
-    </section>
-  )
-}
-
-function DraftApprovalStep({ done, label, detail }: { done: boolean; label: string; detail: string }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: space[2], alignItems: 'start' }}>
-      <span style={{ width: 18, height: 18, borderRadius: radius.pill, background: done ? color.success : color.paper2, color: done ? '#fff' : color.ghost, border: `1px solid ${done ? color.success : color.line}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-        <Check size={11} />
-      </span>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'block', color: color.ink, fontSize: t.size.cap, fontWeight: t.weight.semibold }}>{label}</span>
-        <span style={{ display: 'block', color: color.ghost, fontSize: t.size.micro, lineHeight: 1.4, marginTop: 1 }}>{detail}</span>
-      </span>
-    </div>
-  )
-}
-
 function draftProductionStatus(post: Post) {
   const status = (post.status ?? '').toLowerCase()
   if (status.includes('posted')) return { label: 'Posted', color: color.success }
@@ -2053,17 +1593,6 @@ function draftProductionStatus(post: Post) {
   if (status.includes('reject') || status.includes('changes')) return { label: 'Needs changes', color: color.danger }
   if (status.includes('review') || status.includes('pending')) return { label: 'Pending review', color: color.warn }
   return { label: 'Draft', color: color.accent }
-}
-
-function draftScheduleLabel(post: Post) {
-  const raw = post.scheduled_at || post.publish_date || post.posted_at || post.published_at
-  if (!raw) return { value: 'Unscheduled', detail: 'Needs a calendar slot' }
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return { value: 'Scheduled', detail: raw }
-  return {
-    value: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    detail: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-  }
 }
 
 function draftCreativeSpec(post: Post): DraftSpec {
@@ -2083,25 +1612,6 @@ function draftCreativeSpec(post: Post): DraftSpec {
   if (channel.includes('medium') || channel.includes('blog')) return { aspect: '16 / 9', dimensions: '1600 x 900', label: 'Article hero image' }
   if (channel.includes('tiktok')) return { aspect: '9 / 16', dimensions: '1080 x 1920', label: 'TikTok vertical video' }
   return { aspect: '16 / 9', dimensions: '1200 x 675', label: 'Post media' }
-}
-
-function draftMediaFrames(post: Post): Array<{ url: string; text?: string | null }> {
-  const meta = post.media_metadata as { frames?: Array<{ url?: unknown; text?: unknown }> } | null | undefined
-  if (!Array.isArray(meta?.frames)) return []
-  return meta.frames.filter((frame): frame is { url: string; text?: string | null } => (
-    !!frame &&
-    typeof frame === 'object' &&
-    typeof frame.url === 'string' &&
-    frame.url.length > 0
-  )).map(frame => ({ url: frame.url, text: typeof frame.text === 'string' ? frame.text : null }))
-}
-
-function draftMediaPrompt(post: Post) {
-  const meta = post.media_metadata as { prompt?: unknown; image_prompt?: unknown } | null | undefined
-  if (typeof post.image_prompt === 'string' && post.image_prompt.trim()) return post.image_prompt.trim()
-  if (typeof meta?.prompt === 'string' && meta.prompt.trim()) return meta.prompt.trim()
-  if (typeof meta?.image_prompt === 'string' && meta.image_prompt.trim()) return meta.image_prompt.trim()
-  return ''
 }
 
 function btn(bg: string, fg: string, busy: boolean): React.CSSProperties {
@@ -2198,57 +1708,6 @@ function buildLaunchActions(stats: CommandStats): LaunchAction[] {
     ? { icon: Lightbulb, title: 'Follow-Up Angles', sub: 'Comments, shares, traffic', prompt: 'Find content topics and engagement signals that deserve follow-up. Turn comments, shares, clicks, and objections into research, reply, or next-content angles.' }
     : { icon: Lightbulb, title: 'Content Angles', sub: 'Fresh market hooks', prompt: "Give me 5 content angles grounded in this space's offer, audience, customer problems, proof points, and current market conversations." })
   return a.slice(0, 6)
-}
-
-type ModelRouteRecommendation = {
-  icon: React.ElementType
-  label: string
-  status: string
-  cost: string
-  estimate: SpendEstimate
-  body: string
-  tone: 'success' | 'warn' | 'danger' | 'info'
-}
-
-function modelRouteRecommendations(capabilities: ProviderCapabilities, pricingCatalog?: ModelPricingGuide[]): ModelRouteRecommendation[] {
-  return buildModelRecommendations({
-    textReady: capabilities.textReady,
-    imageReady: capabilities.imageReady,
-    videoReady: capabilities.videoReady,
-    hasOpenRouter: capabilities.hasOpenRouter,
-    hasAnthropic: capabilities.hasAnthropic,
-    hasOpenAI: capabilities.hasOpenAI,
-    hasFal: capabilities.hasFal,
-    imagesEnabled: capabilities.imagesEnabled,
-    standardVideoEnabled: capabilities.standardVideoEnabled,
-    premiumMediaEnabled: capabilities.premiumMediaEnabled,
-    defaultTextModel: capabilities.defaultTextModel,
-    defaultImageModel: capabilities.defaultImageModel,
-    defaultVideoModel: capabilities.defaultVideoModel,
-    defaultImageVideoModel: capabilities.defaultImageVideoModel,
-    monthlyBudgetUsd: capabilities.monthlyBudgetUsd,
-  }, pricingCatalog).map(item => ({
-    icon: item.role === 'Text' ? KeyRound : item.role === 'Image' ? ImagePlus : Clapperboard,
-    label: item.role,
-    status: item.status,
-    cost: item.provider,
-    estimate: item.estimate,
-    body: `${item.reason} ${item.escalation}`,
-    tone: item.tone,
-  }))
-}
-
-function routeToneStyle(tone: ModelRouteRecommendation['tone']) {
-  if (tone === 'success') return { border: color.success, bg: color.surface, fg: color.success }
-  if (tone === 'warn') return { border: color.warn, bg: color.surface, fg: color.warn }
-  if (tone === 'danger') return { border: color.danger, bg: color.surface, fg: color.danger }
-  return { border: color.line, bg: color.surface, fg: color.info }
-}
-
-function pricingCatalogBadge(source: ModelPricingCatalogSource = 'loading', rowCount = 0) {
-  if (source === 'catalog') return { label: `Live catalog, ${rowCount} rows`, color: color.success, border: color.success }
-  if (source === 'fallback') return { label: 'Fallback guide', color: color.warn, border: color.warn }
-  return { label: 'Loading guide', color: color.ghost, border: color.line }
 }
 
 function Idle({ onRun, actions, setup, projectName, onOpenBrain, composer }: {
