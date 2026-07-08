@@ -1,6 +1,7 @@
 # Sona (Next.js) on Netlify. This lives in web/, so the Netlify site for Sona
-# must set its base directory to `web`. The Next runtime plugin is auto-installed
-# by Netlify when it detects Next; it is declared here to be explicit.
+# has its base directory set to `web`. Deploy via git-connected CI (the reliable
+# path for the Next runtime); the @netlify/plugin-nextjs runtime wires the server
+# handler and edge middleware during the Netlify build.
 [build]
   command = "npm run build"
   publish = ".next"
