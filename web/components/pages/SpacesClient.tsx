@@ -12,6 +12,7 @@ import {
   CheckSquare,
   FolderOpen,
   KeyRound,
+  LogOut,
   MailPlus,
   MessageSquare,
   Plus,
@@ -147,7 +148,7 @@ const rowStyle: CSSProperties = {
 
 export default function AcrossClients() {
   const navigate = useNavigate()
-  const { session, user } = useAuth()
+  const { session, user, signOut } = useAuth()
   const { activeOrg } = useOrg()
   const { projects, switchProject, loading, refetch } = useProject()
   const { push } = useToast()
@@ -554,6 +555,25 @@ export default function AcrossClients() {
     await loadObservations()
   }
 
+  const shelfActions = (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: space[3], flexWrap: 'wrap' }}>
+      <Button
+        variant="secondary"
+        leading={<LogOut size={14} />}
+        onClick={() => { void signOut() }}
+      >
+        Log out
+      </Button>
+      <Button
+        variant="primary"
+        leading={<Plus size={14} />}
+        onClick={() => navigate('/onboarding')}
+      >
+        Add space
+      </Button>
+    </div>
+  )
+
   if (!loading && projects.length === 0) {
     return (
       <div style={{ padding: space[8], maxWidth: 940 }}>
@@ -561,7 +581,7 @@ export default function AcrossClients() {
           icon={<FolderOpen size={22} strokeWidth={1.5} />}
           title="No spaces yet"
           body="Each space has its own brain, content, approvals, roles, and keys. Add your first space to begin."
-          actions={<Button variant="primary" onClick={() => navigate('/onboarding')}>Add a space</Button>}
+          actions={shelfActions}
         />
       </div>
     )
@@ -573,15 +593,7 @@ export default function AcrossClients() {
         eyebrow={activeOrg?.name ?? 'Workspace'}
         title="Spaces"
         subtitle="Triage SONA's open work, then switch between spaces."
-        actions={
-          <Button
-            variant="primary"
-            leading={<Plus size={14} />}
-            onClick={() => navigate('/onboarding')}
-          >
-            Add space
-          </Button>
-        }
+        actions={shelfActions}
       />
 
       <AgendaPanel
