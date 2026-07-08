@@ -47,7 +47,7 @@ export default function Login() {
   const from = typeof (location.state as { from?: unknown } | null)?.from === 'string'
     ? (location.state as { from: string }).from
     : '/'
-  const redirectTo = `${window.location.origin}${from}`
+  const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(from)}`
 
   async function oauth(provider: 'google' | 'azure' | 'apple') {
     setError(''); setLoading(provider)
@@ -97,7 +97,7 @@ export default function Login() {
     }
     setError(''); setResetSent(false); setLoading('reset')
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset-password')}`,
     })
     if (error) setError(error.message)
     else setResetSent(true)
@@ -116,7 +116,7 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: 380 }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
-          <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>V</span>
+          <span style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>S</span>
           <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>SONA</span>
         </div>
 
