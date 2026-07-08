@@ -120,6 +120,76 @@ function stripOpenDraftContext(content: string): string {
   return content.split('\n\n---\n[The draft currently open')[0].trim()
 }
 
+function textFromMessageContent(content: unknown): string {
+  if (typeof content === 'string') return stripOpenDraftContext(content)
+  if (!Array.isArray(content)) return ''
+  return content
+    .map(block => {
+      if (!block || typeof block !== 'object') return ''
+      const record = block as Record<string, unknown>
+      return record.type === 'text' && typeof record.text === 'string'
+        ? stripOpenDraftContext(record.text)
+        : ''
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+function numberWordValue(value: string): number | null {
+  const normalized = value.toLowerCase()
+  const numeric = Number.parseInt(normalized, 10)
+  if (Number.isFinite(numeric)) return numeric
+  const words: Record<string, number> = {
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  }
+  return words[normalized] ?? null
+}
+
+function pendingMultiImageApprovalInstruction(messages: Array<{ role: string; content: unknown }>, latestUserText: string): string | null {
+  const normalizedUser = stripOpenDraftContext(latestUserText).toLowerCase().replace(/\s+/g, ' ').trim()
+  if (!/^(yes|yeah|yep|yup|ok|okay|sure|please do|do it|go ahead|continue|proceed|run it|start|render them|render it|generate them|generate it|make them|make it|lets go|let's go)[.!?\s]*$/.test(normalizedUser)) {
+    return null
+  }
+
+  let sawCurrentUser = false
+  let previousAssistantText = ''
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]
+    if (!sawCurrentUser) {
+      if (message.role === 'user') sawCurrentUser = true
+      continue
+    }
+    if (message.role === 'assistant') {
+      previousAssistantText = textFromMessageContent(message.content)
+      break
+    }
+  }
+  const previous = previousAssistantText.toLowerCase()
+  if (!previous || !/[?]|want me|should i|shall i|ready to|go ahead/.test(previous)) return null
+
+  const offer = previous.match(/\b(?:generate|render|make|create)\b[\s\S]{0,180}\b(?:all\s+)?(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(images|visuals|frames|slides)\b/i)
+  const count = offer ? numberWordValue(offer[1]) : null
+  if (!count || count < 2 || count > 10) return null
+
+  return [
+    '<operator_confirmation>',
+    `The operator's latest reply ("${normalizedUser}") confirms your previous offer to generate ${count} images, visuals, frames, or slides.`,
+    'Do not ask again and do not answer with a promise. Treat this as explicit approval to render the pending multi-image visual set now.',
+    `Use generate_carousel with exactly ${count} frames, one dense prompt per image, preserving the order from the prior plan or prior assistant message.`,
+    'If no draft card exists for the set, call save_draft first with a concise caption, then call generate_carousel. If a draft is already open, attach the carousel to that draft.',
+    'Do not call generate_image for only the first image. The whole point of this turn is to generate every pending image.',
+    '</operator_confirmation>',
+  ].join('\n')
+}
+
 const CAMPAIGN_CHANNELS = [
   'LinkedIn',
   'YouTube',
@@ -642,6 +712,13 @@ Generation tools:
   visual ("add an image", "make a video", "create a carousel/quote card").
   Drafting a post does NOT mean attaching a picture. When unsure, write the
   text and stop.
+- CONFIRMATION TURNS COUNT AS EXPLICIT APPROVAL. If your previous assistant
+  turn offered to generate or render a visual set and the operator replies
+  "yes", "continue", "go ahead", "do it", "render them", or similar, you must
+  call the matching generation tool in that same turn. Do not ask again and do
+  not answer with "starting now" unless a tool was actually called. For multiple
+  images, slides, or frames, use generate_carousel with every frame, not
+  generate_image for the first one.
 - save_draft — YOUR DEFAULT for drafting a post. When the operator briefs a
   single post ("draft/write/make a post about X", "give me hooks on Y", "I
   want one post"): WRITE the post yourself THIS TURN — in the brand voice,
@@ -4502,6 +4579,7 @@ Deno.serve(async (req) => {
       cache_control: { type: 'ephemeral' as const, ttl: '1h' as const },
     },
   ]
+  const pendingVisualApproval = pendingMultiImageApprovalInstruction(messages, lastUserText)
 
   // Extended thinking: enable when the operator's intent is analytical.
   // Keyword heuristic + length cue — explicit "think hard" / "analyze" /
@@ -4647,6 +4725,12 @@ Deno.serve(async (req) => {
     if (!allowImageGeneration && (tool.name === 'generate_image' || tool.name === 'generate_infographic' || tool.name === 'generate_carousel')) return false
     return true
   })
+  if (allowImageGeneration && pendingVisualApproval) {
+    systemBlocks.push({
+      type: 'text' as const,
+      text: pendingVisualApproval,
+    })
+  }
   if (!allowImageGeneration) {
     systemBlocks.push({
       type: 'text' as const,
