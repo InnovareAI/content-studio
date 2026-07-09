@@ -364,11 +364,11 @@ export default function Skills() {
 
   const constitutionSkills = useMemo(() => {
     const constitutionalNames = new Set([
-      'Sona Constitution',
-      'Anti-Sycophancy Marketing Challenge',
-      'Evidence and Claim Discipline',
-      'Human Approval Gates',
-      'Sona Evaluation Rubric',
+      'Core Principles',
+      'Push back, no flattery',
+      'Back up every claim',
+      'Ask before publishing',
+      'Quality Standards',
     ])
     const constitutionalTags = new Set([
       'constitution',
@@ -675,9 +675,9 @@ export default function Skills() {
 
 function ViewTabs({ view, setView }: { view: ViewMode; setView: (view: ViewMode) => void }) {
   const tabs: Array<{ id: ViewMode; label: string; icon: ElementType }> = [
-    { id: 'constitution', label: 'Constitution', icon: ShieldCheck },
+    { id: 'constitution', label: 'Core Principles', icon: ShieldCheck },
     { id: 'skills', label: 'Skills', icon: Zap },
-    { id: 'evals', label: 'Evaluation Suite', icon: Target },
+    { id: 'evals', label: 'Quality Checks', icon: Target },
   ]
   return (
     <div style={{ display: 'flex', justifyContent: 'center', margin: `${space[2]} 0 ${space[5]}` }}>
@@ -722,13 +722,13 @@ function ConstitutionView({ skills, loading }: { skills: Skill[]; loading: boole
     return (
       <EmptyState
         icon={<ShieldCheck size={28} />}
-        title="Constitution not seeded yet"
-        body="Apply the constitution migration to seed Sona's core operating skills."
+        title="Core principles not set up yet"
+        body="Seed Sona's core operating skills to fill this in."
       />
     )
   }
 
-  const primary = skills.find(skill => skill.name === 'Sona Constitution')
+  const primary = skills.find(skill => skill.name === 'Core Principles')
   const supporting = skills.filter(skill => skill.id !== primary?.id)
 
   return (
@@ -739,8 +739,8 @@ function ConstitutionView({ skills, loading }: { skills: Skill[]; loading: boole
             <ShieldCheck size={17} />
           </span>
           <div>
-            <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold }}>Sona Constitution</h2>
-            <p style={{ margin: '4px 0 0', color: color.ghost, fontSize: t.size.cap }}>Runtime principles Sona applies before strategy, copy, review, and tool use.</p>
+            <h2 style={{ margin: 0, color: color.ink, fontSize: t.size.h3, fontWeight: t.weight.semibold }}>Core Principles</h2>
+            <p style={{ margin: '4px 0 0', color: color.ghost, fontSize: t.size.cap }}>The rules Sona always follows before strategy, copy, review, and tool use.</p>
           </div>
         </div>
         {primary ? (
