@@ -7,17 +7,22 @@ import type { ElementType, ReactNode } from 'react'
 import {
   BarChart3,
   BookOpen,
-  Brain,
+  CalendarDays,
   Check,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Clock,
+  KeyRound,
   LayoutGrid,
+  Library,
   LogOut,
   MessageSquare,
   Plus,
+  Settings,
+  TrendingUp,
+  Zap,
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useProject } from '@/components/providers/ProjectProvider'
@@ -227,6 +232,10 @@ function RailLabel({ children }: { children: string }) {
   )
 }
 
+function RailDivider() {
+  return <div style={{ height: 1, background: 'var(--paper-edge)', margin: '8px 12px' }} />
+}
+
 function RailRecents({
   collapsed,
   space,
@@ -277,7 +286,7 @@ function RailRecents({
   if (collapsed) return null
 
   const open = (sessionId: string) => {
-    const target = spacePath(space, 'vera')
+    const target = spacePath(space, 'agent')
 
     try {
       localStorage.setItem(`vera-session:${space.id}`, sessionId)
@@ -664,7 +673,7 @@ export function AppShell({
   const space = activeProject
 
   const startNewSession = () => {
-    router.push(`${spacePath(space, 'vera')}?new=${Date.now()}`)
+    router.push(`${spacePath(space, 'agent')}?new=${Date.now()}`)
   }
 
   const handleSignOut = async () => {
@@ -712,17 +721,12 @@ export function AppShell({
         </button>
 
         <nav className="pt-1 space-y-0.5">
-          {navCollapsed ? <div style={{ height: 6 }} /> : <RailLabel>Loop</RailLabel>}
+          {navCollapsed ? <div style={{ height: 6 }} /> : <RailLabel>Workflow</RailLabel>}
           <RailItem
-            href={`/p/${space.slug}`}
-            icon={LayoutGrid}
-            label="Home"
-            collapsed={navCollapsed}
-          />
-          <RailItem
-            href={spacePath(space, 'vera')}
+            href={spacePath(space, 'agent')}
             icon={MessageSquare}
-            label="VERA"
+            label="Agent"
+            tag="create"
             collapsed={navCollapsed}
             onClick={() => window.dispatchEvent(new CustomEvent('vera:home'))}
           />
@@ -734,18 +738,24 @@ export function AppShell({
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'knowledge')}
-            icon={BookOpen}
-            label="Knowledge"
+            href={spacePath(space, 'calendar')}
+            icon={CalendarDays}
+            label="Planner"
+            tag="schedule"
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'brain')}
-            icon={Brain}
-            label="Brain"
+            href={spacePath(space, 'artifacts')}
+            icon={Library}
+            label="Studio"
+            tag="organize"
             collapsed={navCollapsed}
           />
-          <RailItem href={spacePath(space, 'measure')} icon={BarChart3} label="Measure" collapsed={navCollapsed} />
+
+          {navCollapsed ? <RailDivider /> : <RailLabel>More</RailLabel>}
+          <RailItem href={spacePath(space, 'measure')} icon={BarChart3} label="Performance" soon collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'learning')} icon={TrendingUp} label="Learning" soon collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'keys')} icon={KeyRound} label="Integrations" collapsed={navCollapsed} />
         </nav>
 
         <RailRecents collapsed={navCollapsed} space={space} />
@@ -753,6 +763,9 @@ export function AppShell({
         <div className="flex-1" />
 
         <nav className="space-y-0.5 pb-1">
+          <RailItem href={spacePath(space, 'brain')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'skills')} icon={Zap} label="AI Settings" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'settings')} icon={Settings} label="Settings" collapsed={navCollapsed} />
           <button
             type="button"
             onClick={toggleNav}
