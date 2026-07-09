@@ -107,6 +107,30 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Home route: land the user in a working space (or login / onboarding). Done
+  // here in middleware rather than app/page.tsx because a redirect-only server
+  // page trips a Next RSC clientReferenceManifest invariant (500).
+  if (request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.search = ''
+    if (!user) {
+      url.pathname = '/login'
+    } else {
+      const { data: rows } = await supabase
+        .from('projects')
+        .select('slug, is_default, is_archived')
+        .eq('is_archived', false)
+        .order('is_default', { ascending: false })
+        .order('updated_at', { ascending: false })
+      const list = rows ?? []
+      const target = list.find((row) => row.is_default) ?? list[0]
+      url.pathname = target ? `/p/${target.slug}/agent` : '/onboarding'
+    }
+    const redirectResponse = NextResponse.redirect(url)
+    copyResponseCookies(supabaseResponse, redirectResponse)
+    return applyCookieSizeGuard(redirectResponse, request)
+  }
+
   if (!user && request.nextUrl.pathname.startsWith('/p/')) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)

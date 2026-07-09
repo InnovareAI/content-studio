@@ -1,33 +1,10 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+'use client'
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  const { data, error } = await supabase
-    .from('projects')
-    .select('id, slug, is_default, is_archived')
-    .eq('is_archived', false)
-    .order('is_default', { ascending: false })
-    .order('updated_at', { ascending: false })
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  const spaces = data ?? []
-  const space = spaces.find(row => row.is_default === true) ?? spaces[0]
-
-  if (space) {
-    redirect(`/p/${space.slug}/agent`)
-  }
-
-  redirect('/onboarding')
+// The `/` route is resolved in middleware (redirects to the default space, or to
+// /login / /onboarding). This component is a safe fallback that is not rendered
+// in practice. It is a client component and does not redirect, so it cannot trip
+// the Next RSC clientReferenceManifest invariant that a redirect-only server page
+// hits (which was returning a 500 on `/`).
+export default function HomePage() {
+  return null
 }
