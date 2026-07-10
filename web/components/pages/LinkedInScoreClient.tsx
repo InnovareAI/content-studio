@@ -192,7 +192,7 @@ export default function LinkedInScore() {
     const context = parseProjectInstructions(activeProject?.instructions ?? '').businessContext
     if (demandPlatformHasStrategyEvidence('linkedin', context)) {
       setStrategyGate('valid')
-      setStrategyGateDetail('LinkedIn is configured in this Strategy Brain.')
+      setStrategyGateDetail('LinkedIn is configured in this Playbook.')
       return
     }
     setStrategyGate('loading')
@@ -217,7 +217,7 @@ export default function LinkedInScore() {
         setStrategyGateDetail(hasLinkedInConnection ? 'LinkedIn is connected for this space.' : 'This space already has LinkedIn content history.')
       } else {
         setStrategyGate('invalid')
-        setStrategyGateDetail('Add a LinkedIn source or explicit LinkedIn strategy in the client Strategy Brain first.')
+        setStrategyGateDetail('Add a LinkedIn source or explicit LinkedIn strategy in the client Playbook first.')
       }
     })
     return () => { cancelled = true }
@@ -325,14 +325,14 @@ export default function LinkedInScore() {
           {strategyGate !== 'loading' && (
             <div className="flex gap-2 mt-4">
               <button
-                onClick={() => navigate(activeProject?.slug ? `/p/${activeProject.slug}/brain` : '/')}
+                onClick={() => navigate(activeProject?.slug ? `/p/${activeProject.slug}/playbook` : '/')}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
                 style={{ background: 'var(--ink)', color: 'var(--paper-warm)', borderRadius: 'var(--radius-md)' }}
               >
-                Open Strategy Brain
+                Open Playbook
               </button>
               <button
-                onClick={() => navigate(activeProject?.slug ? `/p/${activeProject.slug}/vera` : '/')}
+                onClick={() => navigate(activeProject?.slug ? `/p/${activeProject.slug}/agent` : '/')}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium transition-colors"
                 style={{ border: '1px solid var(--paper-edge)', color: 'var(--ink-quiet)', borderRadius: 'var(--radius-md)' }}
               >

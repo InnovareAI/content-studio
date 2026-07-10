@@ -8,5 +8,5 @@ type PageProps = Readonly<{
 
 export default async function Page({ params }: PageProps) {
   const { slug } = await params
-  redirect(`/p/${slug}/measure?tab=intel`)
+  redirect(`/p/${slug}/performance?tab=intel`)
 }

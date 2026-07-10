@@ -282,13 +282,13 @@ function TeamTab() {
 // ─── Integrations Tab ─────────────────────────────────────────────────────────
 function IntegrationsTab() {
   const { activeProject } = useProject()
-  const brainHref = activeProject?.slug ? `/p/${activeProject.slug}/brain` : '/spaces'
+  const brainHref = activeProject?.slug ? `/p/${activeProject.slug}/playbook` : '/spaces'
 
   return (
     <div className="max-w-5xl space-y-5">
       <div>
         <h2 className="text-base font-semibold text-gray-900">Agentic integrations</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Connect space-owned accounts. Channel strategy and writing rules live inside each Strategy Brain.</p>
+        <p className="text-sm text-gray-500 mt-0.5">Connect space-owned accounts. Channel strategy and writing rules live inside each Playbook.</p>
       </div>
 
       <ClientIntegrationsCard />
@@ -303,7 +303,7 @@ function IntegrationsTab() {
         </div>
         <div className="px-4 py-3 space-y-3">
           <p className="text-xs text-gray-500 leading-relaxed">
-            Use Strategy Brain for channel tone of voice, speaker mode, approval routing, publish guards, measurement focus, and follow-up triggers. Settings stays focused on credentials, OAuth, publisher health, and workspace access.
+            Use Playbook for channel tone of voice, speaker mode, approval routing, publish guards, measurement focus, and follow-up triggers. Settings stays focused on credentials, OAuth, publisher health, and workspace access.
           </p>
           <button
             type="button"
@@ -311,7 +311,7 @@ function IntegrationsTab() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors"
           >
             <ShieldCheck size={12} />
-            {activeProject?.slug ? 'Open Strategy Brain' : 'Pick a space'}
+            {activeProject?.slug ? 'Open Playbook' : 'Pick a space'}
           </button>
         </div>
       </div>
@@ -319,23 +319,23 @@ function IntegrationsTab() {
   )
 }
 
-// ─── Brain & Models Tab ──────────────────────────────────────────────────────
+// Playbook and Models Tab
 function BrainModelsTab() {
   const { activeProject } = useProject()
-  const brainHref = activeProject?.slug ? `/p/${activeProject.slug}/brain` : '/spaces'
+  const brainHref = activeProject?.slug ? `/p/${activeProject.slug}/playbook` : '/spaces'
 
   return (
     <div className="max-w-5xl space-y-5">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Brain &amp; Models</h2>
+        <h2 className="text-base font-semibold text-gray-900">Playbook &amp; Models</h2>
         <p className="text-sm text-gray-500 mt-0.5">Setup lives here so Command, Planner, Review, and Performance stay focused on daily work.</p>
       </div>
 
       <section className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-800">Strategy Brain</p>
-            <p className="text-xs text-gray-500 mt-0.5">Brand voice, audiences, channel strategy, and knowledge sources live inside the Brain.</p>
+            <p className="text-sm font-medium text-gray-800">Playbook</p>
+            <p className="text-xs text-gray-500 mt-0.5">Brand voice, audiences, channel strategy, and knowledge sources live inside the Playbook.</p>
           </div>
           <button
             type="button"
@@ -343,7 +343,7 @@ function BrainModelsTab() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors"
           >
             <Brain size={12} />
-            {activeProject?.slug ? 'Open Strategy Brain' : 'Pick a space'}
+            {activeProject?.slug ? 'Open Playbook' : 'Pick a space'}
           </button>
         </div>
       </section>

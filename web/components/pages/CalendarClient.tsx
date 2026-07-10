@@ -243,7 +243,7 @@ export default function CalendarClient() {
   }
 
   function createNewPost() {
-    if (activeProject?.slug) router.push(`/p/${activeProject.slug}/vera`)
+    if (activeProject?.slug) router.push(`/p/${activeProject.slug}/agent`)
     else router.push('/vera')
   }
 

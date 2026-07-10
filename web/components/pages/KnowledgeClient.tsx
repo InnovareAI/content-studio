@@ -422,7 +422,7 @@ export default function Knowledge() {
     if (!activeProject?.id || applyingBrainId) return
     const updates = buildBrainUpdates(row)
     if (updates.length === 0) {
-      setError('This knowledge entry does not contain structured Brain fields yet.')
+      setError('This knowledge entry does not contain structured Playbook fields yet.')
       return
     }
 
@@ -468,10 +468,10 @@ export default function Knowledge() {
       .eq('id', row.id)
 
     if (rowError) {
-      setReport(`Applied to Brain. Could not mark the knowledge row: ${rowError.message}`)
+      setReport(`Applied to Playbook. Could not mark the knowledge row: ${rowError.message}`)
     } else {
       setKnowledge(current => current.map(item => item.id === row.id ? { ...item, extracted: nextExtracted } : item))
-      setReport(`Applied to Brain · ${Array.from(new Set(fields)).join(', ')}`)
+      setReport(`Applied to Playbook: ${Array.from(new Set(fields)).join(', ')}`)
     }
     setApplyingBrainId(null)
     refetch()
@@ -730,9 +730,9 @@ export default function Knowledge() {
                           loading={applyingThisRow}
                           disabled={appliedToBrain || (!!applyingBrainId && !applyingThisRow)}
                           onClick={() => { void applyKnowledgeToBrain(k) }}
-                          title={appliedToBrain ? 'Already applied to this Strategy Brain' : 'Apply extracted fields to this Strategy Brain'}
+                          title={appliedToBrain ? 'Already applied to this Playbook' : 'Apply extracted fields to this Playbook'}
                         >
-                          {appliedToBrain ? 'In Brain' : 'Apply to Brain'}
+                          {appliedToBrain ? 'In Playbook' : 'Apply to Playbook'}
                         </Button>
                         <span style={{ color: 'var(--ghost)', fontSize: t.size.micro }}>
                           {appliedToBrain

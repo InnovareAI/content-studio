@@ -172,7 +172,7 @@ export default function Onboarding() {
 
     // Create the client as a project under the current workspace. The old
     // onboarding flow created a whole organization and org-scoped channel rows;
-    // spaces now live in projects with their source model in Strategy Brain.
+    // spaces now live in projects with their source model in Playbook.
     const { data: project, error: projectErr } = await supabase
       .from('projects')
       .insert({
@@ -208,7 +208,7 @@ export default function Onboarding() {
 
     setSubmitting(false)
     refetch()
-    navigate(`/p/${project.slug}/brain`)
+    navigate(`/p/${project.slug}/playbook`)
   }
 
   return (
@@ -342,9 +342,9 @@ function IntroStep({ onStart }: { onStart: () => void }) {
       <div className="inline-flex w-14 h-14 rounded-2xl bg-gray-100 items-center justify-center mb-6">
         <Sparkles className="w-7 h-7 text-gray-700" />
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">Set up Sona&apos;s Brain</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-3">Set up Sona&apos;s Playbook</h1>
       <p className="text-base text-gray-600 max-w-md mx-auto mb-8">
-        Start with the company URL, then add only the sources and strategy assumptions Sona should use. You can refine everything in the Brain after setup.
+        Start with the company URL, then add only the sources and strategy assumptions Sona should use. You can refine everything in the Playbook after setup.
       </p>
       <button onClick={onStart}
         className="inline-flex items-center gap-1.5 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold">
@@ -374,7 +374,7 @@ function WebsiteStep({ website, onChange }: { website: string; onChange: (v: str
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <HintCard title="Extract" body="Company facts, offers, pages, proof, and constraints." />
         <HintCard title="Plan" body="Channel fit, audience assumptions, and content jobs." />
-        <HintCard title="Learn" body="Performance signals update the Brain after publishing." />
+        <HintCard title="Learn" body="Performance signals update the Playbook after publishing." />
       </div>
     </div>
   )
@@ -387,7 +387,7 @@ function EssentialsStep({ collected, onChange }: { collected: Record<string, str
         icon={<FileText className="w-5 h-5 text-gray-700" />}
         eyebrow="Optional facts"
         title="Business context"
-        body="Add what you already know. If you leave this light, Sona can extract more from the website and uploaded documents in the Brain."
+        body="Add what you already know. If you leave this light, Sona can extract more from the website and uploaded documents in the Playbook."
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="Space name" value={collected.company_name ?? ''} onChange={v => onChange('company_name', v)} placeholder="Acme Inc." />
@@ -413,9 +413,9 @@ function SourcesStep({ collected, onChange }: { collected: Record<string, string
         <div className="flex items-start gap-3">
           <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
           <div>
-            <div className="text-sm font-semibold text-gray-900">Document extraction lives in the Brain</div>
+            <div className="text-sm font-semibold text-gray-900">Document extraction lives in the Playbook</div>
             <p className="text-sm text-gray-500 mt-1">
-              After setup, upload a PDF, DOCX, proposal, brand deck, or brief in Strategy Brain. Sona extracts fields for review before saving.
+              After setup, upload a PDF, DOCX, proposal, brand deck, or brief in Playbook. Sona extracts fields for review before saving.
             </p>
           </div>
         </div>
@@ -443,7 +443,7 @@ function StrategyStep({ collected, onChange }: { collected: Record<string, strin
         icon={<Target className="w-5 h-5 text-gray-700" />}
         eyebrow="Assumptions"
         title="Strategy starting point"
-        body="These are not permanent rules. They help Sona avoid generic output until the Brain has source and performance evidence."
+        body="These are not permanent rules. They help Sona avoid generic output until the Playbook has source and performance evidence."
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {STRATEGY_FIELDS.map(field => field.multiline ? (
@@ -485,7 +485,7 @@ function ReviewStep({ collected, onEdit }: { collected: Record<string, string>; 
         icon={<Check className="w-5 h-5 text-gray-700" />}
         eyebrow="Review"
         title="Create this space"
-        body="Click a section to edit. Sona will save this to the Strategy Brain and open the Brain so sources and documents can be pulled next."
+        body="Click a section to edit. Sona will save this to the Playbook and open the Playbook so sources and documents can be pulled next."
       />
       <ReviewGroup title="Required start" onEdit={() => onEdit(1)}>
         <Row label="Company URL" value={collected.website ?? 'Not provided'} />

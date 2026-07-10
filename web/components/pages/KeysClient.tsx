@@ -2,11 +2,11 @@
 
 // Per-client API keys. A client manages its OWN provider keys inside its OWN
 // space (scoped to the active project). Saving goes through the client-secrets
-// function (which authorizes via canManageProject — the space owner / org
+// function (which authorizes via canManageProject - the space owner / org
 // admins); listing + revoking are direct, gated by client_api_keys RLS.
 //
 // This page is keys only. Generation policy, model defaults, and the budget cap
-// live in Settings → Brain & Models (see GenerationSettings).
+// live in Settings > Playbook & Models (see GenerationSettings).
 import { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -142,7 +142,7 @@ export default function ClientKeys() {
       <PageHeader
         eyebrow={activeProject.name}
         title="Keys and models"
-        subtitle="Connect this space to its own provider keys and pick the models it runs on. Keys are stored encrypted and used only for this space. Text and reasoning run on the space OpenRouter key; image and video run on FAL or OpenRouter. The generation budget lives in Settings → Brain & Models."
+        subtitle="Connect this space to its own provider keys and pick the models it runs on. Keys are stored encrypted and used only for this space. Text and reasoning run on the space OpenRouter key; image and video run on FAL or OpenRouter. The generation budget lives in Settings > Playbook & Models."
       />
 
       <section style={{ marginBottom: space[8] }}>

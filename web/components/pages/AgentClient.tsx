@@ -1,6 +1,6 @@
 'use client'
 
-// SONA - the one DOING surface (/p/:slug/vera). The Claude 3-pane:
+// SONA - the one DOING surface (/p/:slug/agent). The Claude 3-pane:
 // rail (Layout) - conversation (center, here) - draft artifact (right rail).
 //
 // One composer drives both chat and drafting: vera-chat decides, and when
@@ -570,9 +570,9 @@ export default function AgentClient() {
       }))
   }, [activeOrg?.id, activeProject?.id])
 
-  // Brain readiness - SONA writes sharper when the client's brain is set up, so
-  // when it's thin we make "set up the brain" the obvious first step (the spine
-  // starts at the brain, persona-first). Cheap count probes per client; guards
+  // Playbook readiness - SONA writes sharper when the client's playbook is set up, so
+  // when it's thin we make "set up the playbook" the obvious first step (the spine
+  // starts at the playbook, persona-first). Cheap count probes per client; guards
   // on errors so a missing table reads as "not done" rather than crashing idle.
   useEffect(() => {
     if (!activeProject?.id || !activeOrg?.id) { setSetup(null); return }
@@ -1395,7 +1395,7 @@ export default function AgentClient() {
         ) : messages.length === 0 ? (
           <Idle onRun={pr => send(pr)} actions={buildLaunchActions(stats)}
             setup={setup} projectName={activeProject?.name ?? 'this space'}
-            onOpenBrain={() => { if (activeProject?.slug) router.push(`/p/${activeProject.slug}/brain`) }}
+            onOpenBrain={() => { if (activeProject?.slug) router.push(`/p/${activeProject.slug}/playbook`) }}
             composer={renderComposer('idle')} />
         ) : (
           <div style={{ maxWidth: 680, margin: '0 auto', padding: `0 ${space[8]}`, display: 'flex', flexDirection: 'column', gap: space[7] }}>
@@ -1700,7 +1700,7 @@ function buildLaunchActions(stats: CommandStats): LaunchAction[] {
   a.push(stats.campaigns > 0
     ? { icon: Megaphone, title: 'Improve Campaign', sub: `${stats.campaigns} active campaign${stats.campaigns === 1 ? '' : 's'}`, prompt: "Review this space's active campaigns and suggest the highest-impact improvement to audience, problem, offer, CTA, cadence, and channel mix. Prioritize measurable audience response." }
     : { icon: Megaphone, title: 'Plan Campaign', sub: 'Audience-led series', prompt: 'Plan a content campaign for this space. Define audience, problem, offer, campaign goal, valid channels, success metric, and draft the first content batch.' })
-  a.push({ icon: PenLine, title: 'Platform Post', sub: 'Channel, hook, CTA', prompt: 'Draft one platform-native post for the best valid channel in this space. Use Brain context to choose the channel, audience, hook, proof angle, CTA, and follow-up signal. Do not default to LinkedIn unless it is a valid strategy channel.' })
+  a.push({ icon: PenLine, title: 'Platform Post', sub: 'Channel, hook, CTA', prompt: 'Draft one platform-native post for the best valid channel in this space. Use Playbook context to choose the channel, audience, hook, proof angle, CTA, and follow-up signal. Do not default to LinkedIn unless it is a valid strategy channel.' })
   a.push({ icon: ImagePlus, title: 'Visual Asset', sub: 'Carousel or image', prompt: 'Create a platform-native visual asset for a campaign post. Recommend carousel, infographic, quote card, or custom image, then build the prompt and ask before rendering.' })
   a.push({ icon: Clapperboard, title: 'Video Storyboard', sub: 'Scenes and cost', prompt: 'Create a storyboard for a short campaign video. Include scene beats, timing, camera notes, caption, model recommendation, and estimated prototype cost. Do not render until I explicitly approve the paid generation.' })
   a.push({ icon: Zap, title: 'Repurpose Across Channels', sub: 'YT, Medium, Quora, Reddit, X', prompt: 'Turn one core content idea into platform-native versions for LinkedIn, YouTube, Medium, Quora, Reddit, Instagram, Facebook, blog, email, and X where relevant. Keep each version native to the channel and identify which ones should be manual, connected, or read-only.' })

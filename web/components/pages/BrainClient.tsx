@@ -1,6 +1,6 @@
 'use client'
 
-// Brain — the per-client ground truth SONA reasons from (/p/:slug/brain).
+// Playbook - the per-client ground truth SONA reasons from (/p/:slug/playbook).
 //
 // · Custom instructions — per project; vera-chat reads them EVERY turn. The
 //   single highest-leverage per-client lever.
@@ -1470,9 +1470,9 @@ export default function Brain() {
   const addTo = (key: keyof BrandVoice, val: string) => { if (val.trim()) setBv(p => ({ ...p, [key]: [...((p[key] as string[]) || []), val.trim()] })) }
   const rmFrom = (key: keyof BrandVoice, i: number) => setBv(p => ({ ...p, [key]: ((p[key] as string[]) || []).filter((_, x) => x !== i) }))
 
-  // ── agentic draft: Sona reads the client's content (content-audit) and
-  // proposes Brain fields plus brand voice. The operator reviews and
-  // saves. Agentic-first means the brain should not start as a blank form. ──
+  // Agentic draft: Sona reads the client's content audit and proposes
+  // Playbook fields plus brand voice. The operator reviews and saves.
+  // Agentic-first means the playbook should not start as a blank form.
   const [drafting, setDrafting] = useState(false)
   const [draftStatus, setDraftStatus] = useState('')
   const [draftAudienceProposals, setDraftAudienceProposals] = useState<AuditAudienceProposal[]>([])
@@ -2041,7 +2041,7 @@ function AuditProposalPanel({
             Audit proposals
           </div>
           <p style={{ margin: `${space[2]} 0 0`, color: color.ink2, fontSize: t.size.cap, lineHeight: 1.5 }}>
-            Add useful findings to this Brain. Dismiss anything that does not fit the saved strategy.
+            Add useful findings to this Playbook. Dismiss anything that does not fit the saved strategy.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

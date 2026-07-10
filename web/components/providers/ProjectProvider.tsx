@@ -59,7 +59,7 @@ export function ProjectProvider({
       /* ignore storage errors */
     }
 
-    router.push(`/p/${target.slug}/vera`)
+    router.push(`/p/${target.slug}/agent`)
   }, [router, visibleProjects])
 
   const refetch = useCallback(() => {

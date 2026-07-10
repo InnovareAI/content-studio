@@ -13,11 +13,11 @@ export default async function SpacePage({ params }: SpacePageProps) {
   const base = `/p/${space.slug}`
 
   const items = [
-    { label: 'VERA', href: `${base}/vera`, body: 'Open the working thread and continue the next session.' },
+    { label: 'Agent', href: `${base}/agent`, body: 'Open the working thread and continue the next session.' },
     { label: 'Review', href: `${base}/review`, body: 'Approve, tweak, schedule, or reject content.' },
     { label: 'Knowledge', href: `${base}/knowledge`, body: 'Review sources, uploads, and extracted context.' },
-    { label: 'Brain', href: `${base}/brain`, body: 'Tune strategy, voice, audiences, and channel rules.' },
-    { label: 'Measure', href: `${base}/measure`, body: 'Track audits, outcomes, and performance signals.' },
+    { label: 'Playbook', href: `${base}/playbook`, body: 'Tune strategy, voice, audiences, and channel rules.' },
+    { label: 'Performance', href: `${base}/performance`, body: 'Track audits, outcomes, and performance signals.' },
   ]
 
   return (

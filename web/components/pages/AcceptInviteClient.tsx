@@ -43,7 +43,7 @@ export default function AcceptInvite() {
           projectSlug,
         })
         window.setTimeout(() => {
-          if (projectSlug) window.location.assign(`/p/${projectSlug}/vera`)
+          if (projectSlug) window.location.assign(`/p/${projectSlug}/agent`)
           else window.location.assign('/spaces')
         }, 900)
       } catch (error) {

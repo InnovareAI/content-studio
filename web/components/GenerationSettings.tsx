@@ -1,7 +1,7 @@
 'use client'
 
 // Editable generation policy for the active space: image/video/premium toggles,
-// model defaults, and the generation budget cap. Lives in Settings → Brain &
+// model defaults, and the generation budget cap. Lives in Settings > Playbook &
 // Models. The API-keys page stays focused on credentials; this reads + writes
 // projects.ai_policy and validates choices against the space's active keys.
 import { useCallback, useEffect, useState } from 'react'

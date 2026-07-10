@@ -63,7 +63,7 @@ export default function OnboardingAudit() {
     async function preflight() {
       // 1. If callback from Unipile, persist the account_id and continue the
       //    normal source audit. LinkedIn profile scoring is now optional and
-      //    only available when the client Strategy Brain makes LinkedIn valid.
+      //    only available when the client Playbook makes LinkedIn valid.
       const unipileStatus = searchParams.get('unipile_status')
       const accountId = searchParams.get('account_id')
       if (unipileStatus === 'success' && accountId) {

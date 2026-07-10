@@ -341,7 +341,7 @@ export default function ReviewClient({ initialView }: { initialView?: 'list' | '
   ), [filters, campaignFilter])
   const selectedCount = selectedIds.size
   const postReviewPath = (postId: string) => activeProject?.slug ? `/p/${activeProject.slug}/review/${postId}` : `/review/${postId}`
-  const calendarPath = activeProject?.slug ? `/p/${activeProject.slug}/calendar` : '/calendar'
+  const calendarPath = activeProject?.slug ? `/p/${activeProject.slug}/planner` : '/calendar'
 
   useRightRail(
     <ReviewRightRail

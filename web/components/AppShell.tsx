@@ -738,14 +738,14 @@ export function AppShell({
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'calendar')}
+            href={spacePath(space, 'planner')}
             icon={CalendarDays}
             label="Planner"
             tag="schedule"
             collapsed={navCollapsed}
           />
           <RailItem
-            href={spacePath(space, 'artifacts')}
+            href={spacePath(space, 'studio')}
             icon={Library}
             label="Studio"
             tag="organize"
@@ -753,9 +753,9 @@ export function AppShell({
           />
 
           {navCollapsed ? <RailDivider /> : <RailLabel>More</RailLabel>}
-          <RailItem href={spacePath(space, 'measure')} icon={BarChart3} label="Performance" soon collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'performance')} icon={BarChart3} label="Performance" soon collapsed={navCollapsed} />
           <RailItem href={spacePath(space, 'learning')} icon={TrendingUp} label="Learning" soon collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'keys')} icon={KeyRound} label="Integrations" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'integrations')} icon={KeyRound} label="Integrations" collapsed={navCollapsed} />
         </nav>
 
         <RailRecents collapsed={navCollapsed} space={space} />
@@ -763,8 +763,8 @@ export function AppShell({
         <div className="flex-1" />
 
         <nav className="space-y-0.5 pb-1">
-          <RailItem href={spacePath(space, 'brain')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
-          <RailItem href={spacePath(space, 'skills')} icon={Zap} label="AI Settings" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'playbook')} icon={BookOpen} label="Playbook" collapsed={navCollapsed} />
+          <RailItem href={spacePath(space, 'ai-settings')} icon={Zap} label="AI Settings" collapsed={navCollapsed} />
           <RailItem href={spacePath(space, 'settings')} icon={Settings} label="Settings" collapsed={navCollapsed} />
           <button
             type="button"

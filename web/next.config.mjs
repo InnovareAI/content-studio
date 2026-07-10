@@ -18,6 +18,22 @@ const nextConfig = {
     // bundling is not blocked. Module-resolution errors still fail the build.
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      { source: '/p/:slug/calendar', destination: '/p/:slug/planner', permanent: false },
+      { source: '/p/:slug/artifacts', destination: '/p/:slug/studio', permanent: false },
+      { source: '/p/:slug/measure', destination: '/p/:slug/performance', permanent: false },
+      { source: '/p/:slug/keys', destination: '/p/:slug/integrations', permanent: false },
+      { source: '/p/:slug/brain', destination: '/p/:slug/playbook', permanent: false },
+      { source: '/p/:slug/skills', destination: '/p/:slug/ai-settings', permanent: false },
+      { source: '/p/:slug/vera', destination: '/p/:slug/agent', permanent: false },
+      { source: '/p/:slug/dashboard', destination: '/p/:slug/agent', permanent: false },
+      { source: '/p/:slug/generate', destination: '/p/:slug/agent', permanent: false },
+      { source: '/p/:slug/blueprint', destination: '/p/:slug/agent', permanent: false },
+      { source: '/p/:slug/audit', destination: '/p/:slug/performance', permanent: false },
+      { source: '/p/:slug/intel', destination: '/p/:slug/performance', permanent: false },
+    ]
+  },
 }
 
 export default nextConfig
