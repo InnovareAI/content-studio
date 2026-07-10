@@ -91,9 +91,14 @@ export async function GET(request: NextRequest) {
     },
   )
 
+  // Probe: did the PKCE code-verifier cookie actually reach this route handler?
+  // Included in the failure detail so we can tell a lost-cookie problem apart
+  // from a genuine exchange rejection without digging through function logs.
+  const hadVerifier = request.cookies.getAll().some((c) => c.name.endsWith('code-verifier'))
+
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    return loginError(base, 'exchange', error.message)
+    return loginError(base, 'exchange', `${error.message} | verifier_cookie=${hadVerifier}`)
   }
 
   if (hasProviderTokens(data.session)) {

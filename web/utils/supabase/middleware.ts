@@ -68,6 +68,16 @@ function redirectLoginCodeToCallback(request: NextRequest) {
 }
 
 export async function updateSession(request: NextRequest) {
+  // The /auth/* routes (OAuth callback, email confirm) run their own Supabase
+  // code exchange and must read the PKCE code-verifier cookie exactly as the
+  // browser wrote it. Running the session-refresh client here first (getUser +
+  // cookie rewrite) can drop that cookie from the request the route handler
+  // sees, which surfaces as "code verifier not found" and breaks OAuth sign-in.
+  // These routes do not need session refresh, so leave them untouched.
+  if (request.nextUrl.pathname.startsWith('/auth/')) {
+    return NextResponse.next({ request })
+  }
+
   const callbackRedirect = redirectLoginCodeToCallback(request)
   if (callbackRedirect) {
     return callbackRedirect
