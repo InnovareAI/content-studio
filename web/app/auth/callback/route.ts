@@ -30,9 +30,20 @@ function hasProviderTokens(session: CallbackSession | null) {
 //     the session cookie and bounces the user back to login.
 //  2. Cookies from exchangeCodeForSession are bound directly to the redirect
 //     response so they actually persist through the redirect.
+function loginError(base: string, reason: string, detail?: string | null) {
+  const params = new URLSearchParams({ error: reason })
+  if (detail) params.set('detail', detail.slice(0, 160))
+  // Surface the failing stage in the server log too (shows in Netlify function
+  // logs) so an OAuth failure is diagnosable without guesswork.
+  console.error(`[auth/callback] ${reason}${detail ? `: ${detail}` : ''}`)
+  return NextResponse.redirect(`${base}/login?${params.toString()}`)
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const oauthError = searchParams.get('error')
+  const oauthErrorDescription = searchParams.get('error_description')
   const nextParam = searchParams.get('next') ?? '/'
   const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/'
 
@@ -41,7 +52,9 @@ export async function GET(request: NextRequest) {
   const base = forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin
 
   if (!code) {
-    return NextResponse.redirect(`${base}/login?error=auth_callback`)
+    // Supabase can redirect here with an OAuth error instead of a code (for
+    // example a PKCE flow-state that expired). Pass it through so it is visible.
+    return loginError(base, oauthError ? 'oauth' : 'nocode', oauthError ? `${oauthError}: ${oauthErrorDescription ?? ''}` : null)
   }
 
   const response = NextResponse.redirect(`${base}${next}`)
@@ -80,7 +93,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    return NextResponse.redirect(`${base}/login?error=auth_callback`)
+    return loginError(base, 'exchange', error.message)
   }
 
   if (hasProviderTokens(data.session)) {
@@ -91,7 +104,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (sessionError) {
-      return NextResponse.redirect(`${base}/login?error=auth_callback`)
+      return loginError(base, 'setsession', sessionError.message)
     }
 
     // Expire any chunk the provider-token write created that the stripped write
