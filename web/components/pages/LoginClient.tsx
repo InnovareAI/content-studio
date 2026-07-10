@@ -12,7 +12,6 @@ import { Mail, Check, Loader2, LockKeyhole, Apple, Eye, EyeOff } from 'lucide-re
 import { supabase } from '@/lib/supabase'
 
 const ENABLE_APPLE_LOGIN = process.env.NEXT_PUBLIC_ENABLE_APPLE_LOGIN === 'true'
-const TRIAL_URL = 'https://innovareai.com/pricing/'
 
 function safeReturnPath(value: string | null | undefined, fallback = '/spaces') {
   return value && value.startsWith('/') && !value.startsWith('//') ? value : fallback
@@ -86,7 +85,10 @@ export default function Login() {
       provider,
       options: {
         redirectTo,
-        scopes: provider === 'azure' ? 'email profile offline_access' : 'email profile',
+        // No offline_access for azure: we do not call Microsoft Graph, and its
+        // provider refresh token bloats the session cookie enough to chunk and
+        // trip the middleware cookie-size guard, which broke Microsoft sign-in.
+        scopes: provider === 'azure' ? 'openid email profile' : 'email profile',
       },
     })
     // On success the browser redirects to the provider; on error, surface it.
@@ -262,12 +264,6 @@ export default function Login() {
                 <button type="button" onClick={emailLink} disabled={busy} className="sona-link" style={{ ...linkBtn, color: 'var(--ghost)', fontWeight: 500 }}>
                   {loading === 'email' ? 'Sending...' : 'Email me a magic link instead'}
                 </button>
-                <p style={{ fontSize: 13, color: 'var(--ghost)', margin: 0 }}>
-                  Don&apos;t have an account?{' '}
-                  <a href={TRIAL_URL} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
-                    Start your free 2-week trial
-                  </a>
-                </p>
               </div>
             </>
           )}

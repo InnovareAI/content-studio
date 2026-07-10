@@ -45,6 +45,17 @@ export async function GET(request: NextRequest) {
   }
 
   const response = NextResponse.redirect(`${base}${next}`)
+
+  // Track the auth-token cookie chunks written by each pass. Azure returns large
+  // provider tokens, so the first write (with provider tokens) can span several
+  // chunks (auth-token.0/.1/.2). Stripping the provider tokens shrinks the
+  // session to fewer chunks, and the stale higher chunks must be expired or the
+  // browser sends a corrupted, oversized cookie that the middleware size guard
+  // then wipes. That orphaned-chunk bug is what broke Microsoft sign-in.
+  const preStripChunks = new Set<string>()
+  const postStripChunks = new Set<string>()
+  let stripPass = false
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -58,6 +69,9 @@ export async function GET(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
             response.cookies.set(name, value, options)
+            if (name.includes('auth-token')) {
+              ;(stripPass ? postStripChunks : preStripChunks).add(name)
+            }
           })
         },
       },
@@ -70,6 +84,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (hasProviderTokens(data.session)) {
+    stripPass = true
     const { error: sessionError } = await supabase.auth.setSession({
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -78,6 +93,14 @@ export async function GET(request: NextRequest) {
     if (sessionError) {
       return NextResponse.redirect(`${base}/login?error=auth_callback`)
     }
+
+    // Expire any chunk the provider-token write created that the stripped write
+    // did not overwrite, so no stale fragment survives on the response.
+    preStripChunks.forEach((name) => {
+      if (!postStripChunks.has(name)) {
+        response.cookies.set(name, '', { ...supabaseCookieOptions, maxAge: 0 })
+      }
+    })
   }
 
   return response
