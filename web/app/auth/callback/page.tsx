@@ -79,13 +79,12 @@ export default function AuthCallback() {
       }
 
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          fail('exchange', error.message)
-          return
-        }
-
-        succeed()
+        // Do NOT exchange manually. createBrowserClient force-enables
+        // detectSessionInUrl, so supabase-js is already exchanging this code in
+        // the background at client init. A second manual exchange races it,
+        // consumes the one-time PKCE verifier, and kills both attempts. Wait
+        // for the session the automatic exchange produces instead.
+        waitForSession(10_000, 'exchange')
         return
       }
 
