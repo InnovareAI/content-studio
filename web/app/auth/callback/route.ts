@@ -91,14 +91,27 @@ export async function GET(request: NextRequest) {
     },
   )
 
-  // Probe: did the PKCE code-verifier cookie actually reach this route handler?
-  // Included in the failure detail so we can tell a lost-cookie problem apart
-  // from a genuine exchange rejection without digging through function logs.
-  const hadVerifier = request.cookies.getAll().some((c) => c.name.endsWith('code-verifier'))
+  // Probe: what sb-* cookies actually reached this route handler, and is the PKCE
+  // code-verifier among them? Emitted as its own untruncated query params (vc,
+  // sbn) so we can tell a lost-cookie problem apart from a genuine exchange
+  // rejection without digging through function logs.
+  const sbCookieNames = request.cookies
+    .getAll()
+    .map((c) => c.name)
+    .filter((n) => n.startsWith('sb-'))
+  const hadVerifier = sbCookieNames.some((n) => n.endsWith('code-verifier'))
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    return loginError(base, 'exchange', `${error.message} | verifier_cookie=${hadVerifier}`)
+    console.error(
+      `[auth/callback] exchange failed verifier=${hadVerifier} sb=[${sbCookieNames.join(',')}] msg=${error.message}`,
+    )
+    const params = new URLSearchParams({
+      error: 'exchange',
+      vc: String(hadVerifier),
+      sbn: String(sbCookieNames.length),
+    })
+    return NextResponse.redirect(`${base}/login?${params.toString()}`)
   }
 
   if (hasProviderTokens(data.session)) {
