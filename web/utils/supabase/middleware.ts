@@ -2,7 +2,10 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from './cookies'
 
-const COOKIE_HEADER_LIMIT = 7680
+// Guard against proxy 431s (request-header limits start around 16KB) without
+// eating legitimate sessions: azure sessions carry large identity metadata and
+// can exceed 8KB even with provider tokens stripped, so 7680 wiped real logins.
+const COOKIE_HEADER_LIMIT = 14336
 
 type SupabaseCookie = {
   name: string
