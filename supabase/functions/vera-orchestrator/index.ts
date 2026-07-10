@@ -53,7 +53,7 @@ SONA senior marketing operating model:
   knowledge whenever available.
 - If source material is weak, do not fake authority. Make the best practical
   assumption, separate it from source-backed claims, and write a draft that is
-  useful without pretending the Strategy Brain is complete.
+  useful without pretending the Playbook is complete.
 - When a brief references a framework, book, expert, playbook, or prior space
   source, treat that as a specialist knowledge lens. Preserve the framework's
   actual logic, name the applicable principle in the strategy, and avoid
@@ -387,7 +387,7 @@ Deno.serve(async (req) => {
           ? audienceQuery.maybeSingle()
           : Promise.resolve({ data: null, error: null })
 
-        // The client's Brain: business context, positioning, proof, voice, and
+        // The client's Playbook: business context, positioning, proof, voice, and
         // constraints (stored in project.instructions). This is the material the
         // reasoning model absorbs to write grounded strategy and briefs.
         const projectQuery = project_id
@@ -447,7 +447,7 @@ ${audience.notes ? `- Operator notes: ${audience.notes}` : ''}
 
 This is not "a VP of Sales" — it is THIS VP of Sales with THESE pains. Reference one specific pain or goal in the post.` : ''
 
-        // Client Brain — the primary material the reasoning model absorbs before
+        // Client Playbook — the primary material the reasoning model absorbs before
         // it plans. Grounds the strategy and the writer brief in real positioning
         // and proof, and lets the writer cite facts instead of inventing them.
         const clientInstructions = (projectRow?.instructions ?? '').trim()

@@ -284,9 +284,9 @@ Marketing and content strategy expertise:
 - You are a senior marketing strategist, content strategist, creative director,
   editor, copy chief, campaign planner, and production lead in one assistant.
   Treat every request as a business communication problem, not a writing task.
-- SONA's job is to turn the active space's Brain assumptions into measurable
+- SONA's job is to turn the active space's Playbook assumptions into measurable
   content and marketing work. Do not behave like a generic social post
-  generator. The Brain decides whether the brand is B2B, B2C, local,
+  generator. The Playbook decides whether the brand is B2B, B2C, local,
   creator-led, commerce, recruiting, community, or mixed. Create content that
   can produce comments, shares, saves, qualified traffic, useful objections,
   inquiries, purchases, community joins, or follow-up signals.
@@ -314,7 +314,7 @@ Marketing and content strategy expertise:
 - Channel fluency: adapt structure and voice for LinkedIn, YouTube, Medium,
   Quora, Reddit, Instagram, Facebook, blogs, email, X, short video, and
   carousel formats. Do not flatten every platform into the same LinkedIn post.
-- Speaker and platform voice: when the Brain defines speaker strategy,
+- Speaker and platform voice: when the Playbook defines speaker strategy,
   platform tone of voice, or approval stakeholders, treat those as operating
   rules. Decide whether the piece should come from the brand account, a named
   founder, an expert, a team voice, or a manual community-safe draft before
@@ -355,13 +355,13 @@ Marketing and content strategy expertise:
   half-finished sentences, no model throat-clearing. Re-read every line as the
   named author before saving; if a line says nothing specific, delete it.
 - Topical currency: anchor to what this audience is actually debating right now,
-  not evergreen filler. When the Brain holds source material (thought-leader
+  not evergreen filler. When the Playbook holds source material (thought-leader
   posts, transcripts, research, uploaded examples), mine it for the live problem
   and write to that, with a premise sharp enough that a reader would argue with it.
 `.trim()
 
 const VERA_KNOWLEDGE_LIBRARIAN = `
-Strategy Brain and knowledge-librarian operating model:
+Playbook and knowledge-librarian operating model:
 - Treat each workspace and active project as a living brand knowledge base.
   The goal is not storage. The goal is compounding judgment, sources, brand
   context, and strategic memory that make every future answer sharper.
@@ -386,16 +386,16 @@ Strategy Brain and knowledge-librarian operating model:
   audience insight, campaign planning, or copy, use injected knowledge first.
   Call kb_search when the answer needs deeper source context than the snippets
   already provided.
-- When a chat answer becomes a useful output, offer to save it into the Brain.
+- When a chat answer becomes a useful output, offer to save it into the Playbook.
   If the current tool can only ingest raw notes, say that plainly and save the
   output as a note only when the operator wants it retained.
-- For Brain health checks, call kb_audit_summary, then assess coverage, source
+- For Playbook health checks, call kb_audit_summary, then assess coverage, source
   provenance, stale wiki articles older than 90 days, unsupported claims,
   contradictions, orphaned raw items, and new article candidates. Separate
   findings from recommended actions.
 - Treat source material as evidence. Cite KB titles when using snippets. Never
   invent business facts, research, performance numbers, or historical decisions.
-- The day-100 goal: every Strategy Brain should become a unique business asset,
+- The day-100 goal: every Playbook should become a unique business asset,
   with the brand perspective, sources, judgment, voice, and content history
   cross-referenced and ready to query.
 `.trim()
@@ -405,15 +405,15 @@ Specialist advisor model:
 - You are not a generic chatbot. You are the orchestration layer for a set of
   specialist marketing advisors. Pick the right lens silently: marketing
   strategy, positioning, copywriting, content strategy, production, brand voice,
-  distribution, audience research, source ingestion, or Brain health.
+  distribution, audience research, source ingestion, or Playbook health.
 - A specialist is made of three things: instructions, skills, and knowledge.
   Instructions define the job and standards. Skills define repeatable
   processes. Knowledge holds trusted principles, examples, case studies, and
   source-backed frameworks.
-- When the Brain contains trusted frameworks, books, expert notes, or internal
+- When the Playbook contains trusted frameworks, books, expert notes, or internal
   playbooks, use them as the specialist's source of truth. Prefer curated
   knowledge over generic model knowledge for space-specific advice.
-- If the relevant Brain is empty or weak, say confidence is low in one line,
+- If the relevant Playbook is empty or weak, say confidence is low in one line,
   offer the best default marketing judgment separately, and recommend what to
   ingest next.
 - Useful knowledge entries should be atomized: topic, category, key insight,
@@ -435,7 +435,7 @@ const VERA_CONSTITUTION_RUNTIME = `
 Sona constitution:
 - Business outcome first: audience, objective, offer, proof, channel, CTA, and
   next step matter more than surface polish.
-- Be source-grounded. Use Strategy Brain, active project context, named sources,
+- Be source-grounded. Use Playbook, active project context, named sources,
   and live source material before generic assumptions. Do not invent facts,
   metrics, performance history, quotes, or business decisions.
 - Challenge weak marketing thinking. Push back on vague positioning, generic
@@ -649,7 +649,7 @@ can't be done now (a tool failed, or you're missing required input), say so
 plainly and ask for exactly what you need — never leave the operator waiting on a
 deliverable that never arrives. For a brand-voice / positioning document
 specifically: write the full document in the reply, and if it should persist to
-the Strategy Brain, also call update_brand_voice.
+the Playbook, also call update_brand_voice.
 
 FORMATTING: the chat renders Markdown, so USE it — headings (##), **bold**,
 bullet/numbered lists, and Markdown tables for any structured data (calendars,
@@ -836,7 +836,7 @@ Knowledge tools:
 - web_search — Anthropic-managed live web search, available only in the
   platform Anthropic runtime. Use it as a quick fallback there. Prefer
   web_research for research briefs, source snippets, OpenRouter projects,
-  and anything that should be ingested into the Brain.
+  and anything that should be ingested into the Playbook.
 - kb_search — semantic search across the workspace knowledge base
   (curated wiki + raw items). Use whenever the operator asks about
   workspace-specific things — competitors, past decisions, customer
@@ -1797,14 +1797,14 @@ const TOOLS = [
   },
   {
     name: 'web_research',
-    description: 'Fetch public web research through InnovareAI Apify and return grounded source snippets. Use for "pull research", current industry topics, Google updates, GEO, AI search, Google I/O, competitor pages, articles, reports, and any public research that should inform a brief. Set ingest_to_brain=true only when the operator asks to save, remember, ingest, or load it into the Brain.',
+    description: 'Fetch public web research through InnovareAI Apify and return grounded source snippets. Use for "pull research", current industry topics, Google updates, GEO, AI search, Google I/O, competitor pages, articles, reports, and any public research that should inform a brief. Set ingest_to_brain=true only when the operator asks to save, remember, ingest, or load it into the Playbook.',
     input_schema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Search query or exact URL to fetch. Be specific and include the topic, date/event, and audience when relevant.' },
         max_results: { type: 'number', description: 'Number of search results/pages to fetch. Default 5, max 8.' },
-        ingest_to_brain: { type: 'boolean', description: 'Whether to store the gathered research as a raw Brain item after fetching it. Default false. Use true only when the operator asks to save or ingest research.' },
-        title: { type: 'string', description: 'Optional Brain/source title. Required when ingest_to_brain is true if a clear title is available.' },
+        ingest_to_brain: { type: 'boolean', description: 'Whether to store the gathered research as a raw Playbook item after fetching it. Default false. Use true only when the operator asks to save or ingest research.' },
+        title: { type: 'string', description: 'Optional Playbook/source title. Required when ingest_to_brain is true if a clear title is available.' },
       },
       required: ['query'],
     },
@@ -2003,7 +2003,7 @@ const TOOLS = [
   },
   {
     name: 'kb_audit_summary',
-    description: 'Fetch a Brain health check: raw items, wiki articles, stale pages, source provenance gaps, raw items not yet synthesized, pending revisions, recent changes, and suggested article candidates. Use when the operator asks "how is my knowledge base?", "what should I clean up?", "what is missing from the Brain?", or wants a monthly health check.',
+    description: 'Fetch a Playbook health check: raw items, wiki articles, stale pages, source provenance gaps, raw items not yet synthesized, pending revisions, recent changes, and suggested article candidates. Use when the operator asks "how is my knowledge base?", "what should I clean up?", "what is missing from the Playbook?", or wants a monthly health check.',
     input_schema: { type: 'object', properties: {} },
   },
   {
@@ -3054,9 +3054,9 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
         const research = await runPublicWebResearch(query, maxResults)
         if (!research.ok) return { result: research.error }
 
-        let ingestLine = 'Not ingested into Brain because ingest_to_brain was false.'
+        let ingestLine = 'Not ingested into Playbook because ingest_to_brain was false.'
         if (ingestToBrain) {
-          ctx.emit({ type: 'tool_progress', tool: 'web_research', status: 'saving research to Brain…' })
+          ctx.emit({ type: 'tool_progress', tool: 'web_research', status: 'saving research to Playbook…' })
           const content = buildWebResearchContent(query, research.items)
           const embedding = await embedText(content, ctx.embeddingRuntime)
           const { data: row, error } = await ctx.supabase.from('kb_raw').insert({
@@ -3069,7 +3069,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
             ingested_by: ctx.userId,
           }).select('id').single()
           if (error) {
-            ingestLine = `Brain ingest failed after research fetch: ${error.message}`
+            ingestLine = `Playbook ingest failed after research fetch: ${error.message}`
           } else {
             const id = (row as { id: string }).id
             ctx.supabase.from('kb_change_log').insert({
@@ -3079,7 +3079,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
               ref_id: id,
               detail: { kind: 'web_capture', title, source: query, embedded: !!embedding, source_count: research.items.length },
             }).then(() => {})
-            ingestLine = `Ingested into Brain as "${title}" (${id.slice(0, 8)}), ${embedding ? 'embedded' : 'stored without embedding'}.`
+            ingestLine = `Ingested into Playbook as "${title}" (${id.slice(0, 8)}), ${embedding ? 'embedded' : 'stored without embedding'}.`
           }
         }
 
@@ -3241,7 +3241,7 @@ Output ONLY valid JSON — no prose, no markdown fences — in exactly this shap
           linkedInValid = false
         }
         if ((kind === 'profile' || kind === 'brew360') && !linkedInValid) {
-          return { result: 'LinkedIn audit is not enabled for this space strategy. Add a LinkedIn source or explicit LinkedIn strategy in the Strategy Brain first.' }
+          return { result: 'LinkedIn audit is not enabled for this space strategy. Add a LinkedIn source or explicit LinkedIn strategy in the Playbook first.' }
         }
         if (kind === 'all') {
           const functions = linkedInValid
@@ -3573,7 +3573,7 @@ Do NOT fabricate claims. If sources contradict, surface the contradiction.`,
         }
 
         const lines = [
-          `Strategy Brain health check:`,
+          `Playbook health check:`,
           `  Raw items: ${rawRes.count ?? 0}`,
           `  Articles: ${articlesRes.count ?? 0} (${Object.entries(byStatus).map(([s, n]) => `${n} ${s}`).join(', ') || 'none'})`,
           `  Pending revisions: ${revisions.length}`,
@@ -3623,7 +3623,7 @@ Do NOT fabricate claims. If sources contradict, surface the contradiction.`,
           }
         }
         if (changes.length) {
-          lines.push('  Recent Brain changes:')
+          lines.push('  Recent Playbook changes:')
           for (const c of changes) {
             const title = typeof c.detail?.title === 'string' ? `: ${c.detail.title}` : ''
             lines.push(`    ${c.event}${c.ref_table ? ` ${c.ref_table}` : ''}${title}`)
