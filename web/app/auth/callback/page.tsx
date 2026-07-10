@@ -45,12 +45,31 @@ export default function AuthCallback() {
       window.location.assign(`/login?${q.toString()}`)
     }
 
+    const finalizeAndGo = async () => {
+      // Drop the bulky provider tokens before leaving. We never call the
+      // provider's own API, and azure tokens are large enough to chunk the
+      // session cookie past the middleware size guard, which then wipes the
+      // auth cookies on the next navigation and bounces the user to login.
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && (session.provider_token || session.provider_refresh_token)) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          })
+        }
+      } catch {
+        // Non-fatal: proceed with the session as stored.
+      }
+      window.location.assign(next)
+    }
+
     const succeed = () => {
       if (settled) return
       settled = true
       cleanUp()
       setMessage('Success. Redirecting...')
-      window.location.assign(next)
+      void finalizeAndGo()
     }
 
     const waitForSession = (timeoutMs: number, timeoutReason: string) => {
